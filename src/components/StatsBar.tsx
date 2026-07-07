@@ -3,24 +3,35 @@
 import { useEffect, useState } from "react";
 import { Database, Wallet, Zap } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
+import { dashboardApiUrl } from "@/lib/dashboard-client";
 
 export function StatsBar() {
   const { isConnected, evmAddress, injBalance, usdcBalance } = useWallet();
   const [source, setSource] = useState("loading");
   const [total, setTotal] = useState<number | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/dashboard")
+    fetch(dashboardApiUrl(), { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         setSource(d.source ?? "api");
         setTotal(d.total ?? null);
+        setWarning(d.warning ?? null);
       })
       .catch(() => setSource("error"));
   }, []);
 
   const sourceLabel =
-    source === "football-data" ? "football-data.org" : source === "api-football" ? "API-Football" : source;
+    source === "football-data"
+      ? "football-data.org"
+      : source === "api-football"
+        ? "API-Football"
+        : source === "misconfigured"
+          ? "Not configured"
+          : source === "fallback"
+            ? "Demo data"
+            : source;
 
   return (
     <div className="grid gap-3 sm:grid-cols-3 mb-6">
@@ -31,7 +42,10 @@ export function StatsBar() {
         <div>
           <p className="text-xs text-gray-500">Data Source</p>
           <p className="font-semibold text-sm">{sourceLabel} · Live</p>
-          <p className="text-[10px] text-gray-600">{total ?? "—"} WC matches · 48 teams</p>
+          <p className="text-[10px] text-gray-600">
+            {total ?? "—"} WC matches · 48 teams
+            {warning ? " · check env vars" : ""}
+          </p>
         </div>
       </div>
 

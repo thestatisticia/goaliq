@@ -1,9 +1,10 @@
 import { WC_LEAGUE_ID } from "./constants";
 import { decidedOnPenalties, hasPenaltyScore, isPenaltyShootout } from "@/lib/utils";
+import { dateWindowForTimeZone, formatDateInTimeZone, resolveTimeZone } from "./calendar";
 import { getCached, getCachedStale, setCached, CACHE_TTL } from "./cache";
 import type { Match, StandingGroup, MatchEvent, MatchDetail } from "./types";
 import { getFallbackMatches, WC_FALLBACK_TEAMS, type WorldCupTeam } from "./wc-fallback";
-import { footballApiRequest } from "./api-football-client";
+import { footballApiRequest, getApiFootballKeyCount } from "./api-football-client";
 import { fetchApisportsMatchExtras } from "./apisports-extras";
 import {
   getFdWorldCupMatches,
@@ -23,6 +24,16 @@ export type { WorldCupTeam };
 const WC_SEASON = 2026;
 const TOURNAMENT_START = "2026-06-01";
 const TOURNAMENT_END = "2026-07-31";
+
+export type DashboardSource = "football-data" | "api-football" | "fallback" | "misconfigured";
+
+function allowDevFallback(): boolean {
+  return process.env.NODE_ENV !== "production" || process.env.ALLOW_WC_FALLBACK === "true";
+}
+
+function isAnyFootballApiConfigured(): boolean {
+  return isFootballDataConfigured() || getApiFootballKeyCount() > 0;
+}
 
 const LIVE_STATUSES = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
 const FINISHED = new Set(["FT", "AET", "PEN"]);
@@ -83,7 +94,7 @@ function isUpcomingMatch(m: Match): boolean {
 
 /** WC matches kicking off on a given calendar day (UTC, matches API dates). */
 async function getMatchesForDate(date: string): Promise<Match[]> {
-  const overlays = await fetchFreshMatchOverlays();
+  const overlays = await fetchFreshMatchOverlays(resolveTimeZone());
   const all = mergeMatchesById(await loadWorldCupTournamentMatches(), overlays);
   let dayMatches = all.filter((m) => isScheduledOnDate(m, date));
 
@@ -144,22 +155,13 @@ function formatDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Local calendar date (YYYY-MM-DD) — matches how users think of "today". */
+/** Server default calendar date (UTC or WC_TIMEZONE). */
 function formatLocalDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return formatDateInTimeZone(d, resolveTimeZone());
 }
 
-function localDateWindow(): string[] {
-  const dates = new Set<string>();
-  for (const offset of [-1, 0, 1]) {
-    const d = new Date();
-    d.setDate(d.getDate() + offset);
-    dates.add(formatLocalDate(d));
-  }
-  return Array.from(dates);
+function isScheduledInTimeZone(m: Match, date: string, timeZone: string): boolean {
+  return formatDateInTimeZone(new Date(m.fixture.date), timeZone) === date;
 }
 
 function matchDateKey(m: Match): string {
@@ -170,8 +172,8 @@ function isScheduledOnDate(m: Match, date: string): boolean {
   return matchDateKey(m) === date || formatLocalDate(new Date(m.fixture.date)) === date;
 }
 
-function isScheduledOnLocalDate(m: Match, date: string): boolean {
-  return formatLocalDate(new Date(m.fixture.date)) === date;
+function isScheduledOnLocalDate(m: Match, date: string, timeZone?: string): boolean {
+  return isScheduledInTimeZone(m, date, resolveTimeZone(timeZone));
 }
 
 function statusRank(short: string): number {
@@ -206,18 +208,18 @@ function mergeMatchesById(base: Match[], overlays: Match[]): Match[] {
   return sortMatches(Array.from(byId.values()));
 }
 
-let overlayPromise: Promise<Match[]> | null = null;
+const overlayPromises = new Map<string, Promise<Match[]>>();
 
-async function tryApisportsOverlays(): Promise<Match[]> {
+async function tryApisportsOverlays(timeZone: string): Promise<Match[]> {
   try {
     const live = await apisportsFetch<Match[]>(`/fixtures?live=all`, "apisports-live", CACHE_TTL.live);
     const wcLive = live.filter(isWorldCup);
     if (wcLive.length > 0) return wcLive;
 
-    const today = formatLocalDate(new Date());
+    const today = formatDateInTimeZone(new Date(), timeZone);
     return await apisportsFetch<Match[]>(
       `/fixtures?date=${today}&league=${WC_LEAGUE_ID}&season=${WC_SEASON}`,
-      `apisports-today-${today}`,
+      `apisports-today-${today}-${timeZone}`,
       CACHE_TTL.today
     );
   } catch {
@@ -226,13 +228,15 @@ async function tryApisportsOverlays(): Promise<Match[]> {
 }
 
 /** Pull live + local today/yesterday/tomorrow from football-data.org (deduped per request). */
-async function fetchFreshMatchOverlays(): Promise<Match[]> {
-  if (!isFootballDataConfigured()) return tryApisportsOverlays();
+async function fetchFreshMatchOverlays(timeZone: string): Promise<Match[]> {
+  const tz = resolveTimeZone(timeZone);
+  if (!isFootballDataConfigured()) return tryApisportsOverlays(tz);
 
-  if (overlayPromise) return overlayPromise;
+  const existing = overlayPromises.get(tz);
+  if (existing) return existing;
 
-  overlayPromise = (async () => {
-    const dates = localDateWindow();
+  const pending = (async () => {
+    const dates = dateWindowForTimeZone(tz);
     const [liveFd, ...dayBatches] = await Promise.all([
       getFdLiveWorldCupMatches().catch(() => [] as Awaited<ReturnType<typeof getFdLiveWorldCupMatches>>),
       ...dates.map((date) =>
@@ -247,22 +251,24 @@ async function fetchFreshMatchOverlays(): Promise<Match[]> {
 
     const mapped = Array.from(byId.values());
     if (mapped.length > 0) return mapped;
-    return tryApisportsOverlays();
+    return tryApisportsOverlays(tz);
   })().finally(() => {
-    overlayPromise = null;
+    overlayPromises.delete(tz);
   });
 
-  return overlayPromise;
+  overlayPromises.set(tz, pending);
+  return pending;
 }
 
 /** Merge tournament cache with fresh overlays and refresh stale kickoffs. */
-async function buildFreshTournament(): Promise<Match[]> {
+async function buildFreshTournament(timeZone?: string): Promise<Match[]> {
+  const tz = resolveTimeZone(timeZone);
   const base = await loadWorldCupTournamentMatches();
-  const overlays = await fetchFreshMatchOverlays();
+  const overlays = await fetchFreshMatchOverlays(tz);
   let merged = mergeMatchesById(base, overlays);
 
-  const today = formatLocalDate(new Date());
-  const todayMatches = merged.filter((m) => isScheduledOnLocalDate(m, today));
+  const today = formatDateInTimeZone(new Date(), tz);
+  const todayMatches = merged.filter((m) => isScheduledInTimeZone(m, today, tz));
 
   // Also refresh any match that kicked off in the last 3h but still shows as not started
   const now = Date.now();
@@ -315,6 +321,17 @@ export async function loadWorldCupTournamentMatches(): Promise<Match[]> {
 
   if (!tournamentPromise) {
     tournamentPromise = (async () => {
+      if (!isFootballDataConfigured() && getApiFootballKeyCount() === 0) {
+        if (lastKnownTournament?.length) return lastKnownTournament;
+        if (allowDevFallback()) {
+          const fallback = getFallbackMatches();
+          if (allowDevFallback()) setCached(cacheKey, fallback, CACHE_TTL.tournament);
+          return fallback;
+        }
+        console.warn("[football] No API keys configured — returning empty tournament in production");
+        return [];
+      }
+
       if (isFootballDataConfigured()) {
         try {
           const fd = await getFdWorldCupMatches();
@@ -351,11 +368,14 @@ export async function loadWorldCupTournamentMatches(): Promise<Match[]> {
 
       if (lastKnownTournament?.length) return lastKnownTournament;
 
-      const fallback = getFallbackMatches();
-      if (!lastKnownTournament?.length) {
-        setCached(cacheKey, fallback, CACHE_TTL.tournament);
+      if (!allowDevFallback()) {
+        console.warn("[football] Tournament APIs failed — fallback disabled in production");
+        return [];
       }
-      return lastKnownTournament?.length ? lastKnownTournament : fallback;
+
+      const fallback = getFallbackMatches();
+      setCached(cacheKey, fallback, CACHE_TTL.tournament);
+      return fallback;
     })().finally(() => {
       tournamentPromise = null;
     });
@@ -414,7 +434,7 @@ export async function getLiveMatches(): Promise<Match[]> {
   const live = tournament.filter(isLiveMatch);
   if (live.length > 0) return live;
 
-  const apisports = await tryApisportsOverlays();
+  const apisports = await tryApisportsOverlays(resolveTimeZone());
   return apisports.filter(isLiveMatch);
 }
 
@@ -504,16 +524,18 @@ export async function getUpcomingWorldCupMatches(limit = 12): Promise<Match[]> {
   ).slice(0, limit);
 }
 
-export async function getDashboardData() {
-  const tournament = await buildFreshTournament();
-  const today = formatLocalDate(new Date());
+export async function getDashboardData(opts?: { timeZone?: string }) {
+  const timeZone = resolveTimeZone(opts?.timeZone);
+  const tournament = await buildFreshTournament(timeZone);
+  const today = formatDateInTimeZone(new Date(), timeZone);
+  const configured = isAnyFootballApiConfigured();
 
   const live = sortMatches(tournament.filter((m) => getMatchPhase(m) === "live"));
   const liveIds = new Set(live.map((m) => m.fixture.id));
   const fixtures = sortMatches(
     tournament.filter(
       (m) =>
-        isScheduledOnLocalDate(m, today) &&
+        isScheduledInTimeZone(m, today, timeZone) &&
         getMatchPhase(m) === "upcoming" &&
         !liveIds.has(m.fixture.id)
     )
@@ -525,6 +547,20 @@ export async function getDashboardData() {
   const results = tournament.filter((m) => getMatchPhase(m) === "finished").reverse();
   const [standings, teams] = await Promise.all([getStandings(), getWorldCupTeamsRegistry()]);
 
+  let source: DashboardSource = isFootballDataConfigured() ? "football-data" : "api-football";
+  let warning: string | undefined;
+
+  if (!configured) {
+    source = "misconfigured";
+    warning =
+      "Football data API is not configured. Add FOOTBALL_DATA_KEY in your Vercel project settings (Environment Variables).";
+  } else if (tournament.length > 0 && tournament.length < 20) {
+    source = "fallback";
+    warning = "Showing limited demo data — live football API is unavailable.";
+  } else if (tournament.length === 0) {
+    warning = "Could not load World Cup schedule. Check API keys or rate limits.";
+  }
+
   return {
     live,
     fixtures,
@@ -533,9 +569,12 @@ export async function getDashboardData() {
     standings,
     teams,
     total: tournament.length,
-    source: isFootballDataConfigured() ? ("football-data" as const) : ("api-football" as const),
+    source,
+    configured,
+    warning,
     updatedAt: new Date().toISOString(),
     scheduleDate: today,
+    timeZone,
   };
 }
 

@@ -6,6 +6,7 @@ import { MatchCard } from "./MatchCard";
 import { LiveMatchPanel } from "./LiveMatchPanel";
 import { Radio, Calendar, Clock, Trophy, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { dashboardApiUrl } from "@/lib/dashboard-client";
 
 type Tab = "live" | "fixtures" | "upcoming" | "results" | "knockout" | "teams";
 
@@ -27,12 +28,13 @@ export function DashboardTabs() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       setError(null);
       try {
-        const res = await fetch("/api/dashboard", { cache: "no-store" });
+        const res = await fetch(dashboardApiUrl(), { cache: "no-store" });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Failed to load");
         setLive(data.live ?? []);
@@ -41,6 +43,7 @@ export function DashboardTabs() {
         setResults(data.results ?? []);
         setTeams(data.teams ?? []);
         setKnockout(data.standings ?? []);
+        setWarning(data.warning ?? null);
       } catch (e) {
         setError((e as Error).message);
       } finally {
@@ -88,6 +91,12 @@ export function DashboardTabs() {
       {error && (
         <div className="rounded-lg border border-goaliq-live/40 bg-goaliq-live/10 p-3 text-sm text-goaliq-live">
           {error}
+        </div>
+      )}
+
+      {warning && !error && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+          {warning}
         </div>
       )}
 
