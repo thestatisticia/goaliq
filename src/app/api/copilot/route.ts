@@ -7,6 +7,8 @@ import {
   getTodaysWorldCupSchedule,
   getUpcomingWorldCupMatches,
   getLatestFinishedMatchForTeam,
+  getStandings,
+  getTeamWorldCupResults,
   formatMatchesForLLM,
 } from "@/lib/football-api";
 import { chatCompletion, COPILOT_SYSTEM_PROMPT, getAvailableModels, getDefaultModel } from "@/lib/llm";
@@ -27,8 +29,21 @@ import {
   formatTeamOutcomeReply,
   isProgressionQuery,
   formatProgressionReply,
+  isStandingsQuery,
+  isKnockoutBracketQuery,
+  isLiveScoreQuery,
+  isTeamScheduleQuery,
+  isTomorrowScheduleQuery,
+  isTeamFormQuery,
+  formatStandingsReply,
+  formatKnockoutBracketReply,
+  formatLiveScoresReply,
+  formatTeamScheduleReply,
+  formatTeamFormReply,
+  formatStandingsForLLM,
   ninjaGreeting,
 } from "@/lib/copilot";
+import { answerKnowledgeQuery, isKnowledgeQuery } from "@/lib/copilot-knowledge";
 import { resolveHeadToHead, findTeamMentionedInMessage, resolveTeamsFromMessage } from "@/lib/team-resolver";
 import { buildPremiumMatchReport, buildPremiumReportForTeams, buildFreeUpcomingAnalysis } from "@/lib/match-analysis";
 import { isPremiumQuery } from "@/lib/payments";
@@ -143,6 +158,19 @@ export async function POST(request: Request) {
     }
   }
 
+  // Static tournament / historical facts (no hallucination)
+  if (isKnowledgeQuery(message)) {
+    const answer = answerKnowledgeQuery(message);
+    if (answer) {
+      return NextResponse.json({
+        reply: `${ninjaGreeting()} ${answer}`,
+        model: "goaliq-knowledge",
+        provider: "goaliq",
+        intent: "knowledge",
+      });
+    }
+  }
+
   // Token swaps — not supported; block LLM from inventing faucet swaps
   if (isSwapOrTradeQuery(message)) {
     return NextResponse.json({
@@ -169,6 +197,186 @@ export async function POST(request: Request) {
         model: "error",
         provider: "football-data.org",
         intent: "today",
+      });
+    }
+  }
+
+  // Tomorrow's schedule
+  if (isTomorrowScheduleQuery(message)) {
+    try {
+      const all = await getAllWorldCupMatches();
+      const tomorrow = new Date();
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+      const matches = all.filter((m) => m.fixture.date.startsWith(tomorrowStr) && m.fixture.status.short === "NS");
+      if (!matches.length) {
+        return NextResponse.json({
+          reply: `${ninjaGreeting()} No World Cup matches scheduled for tomorrow (${tomorrowStr}), ninja.`,
+          model: "football-data",
+          provider: "football-data.org",
+          intent: "tomorrow",
+        });
+      }
+      return NextResponse.json({
+        reply: formatUpcomingScheduleReply(matches).replace("next World Cup matches", "matches **tomorrow**"),
+        model: "football-data",
+        provider: "football-data.org",
+        intent: "tomorrow",
+      });
+    } catch (e) {
+      return NextResponse.json({
+        reply: `Could not load tomorrow's schedule: ${(e as Error).message}`,
+        model: "error",
+        provider: "football-data.org",
+        intent: "tomorrow",
+      });
+    }
+  }
+
+  // Team-specific kickoff ("what time does Brazil play?")
+  if (isTeamScheduleQuery(message)) {
+    try {
+      const team = await findTeamMentionedInMessage(message);
+      if (team) {
+        const [schedule, upcoming] = await Promise.all([
+          getTodaysWorldCupSchedule(),
+          getUpcomingWorldCupMatches(30),
+        ]);
+        const todayMatches = [...schedule.live, ...schedule.upcoming, ...schedule.finished].filter(
+          (m) => m.teams.home.id === team.id || m.teams.away.id === team.id
+        );
+        const nextUp =
+          todayMatches[0] ??
+          upcoming.find((m) => m.teams.home.id === team.id || m.teams.away.id === team.id) ??
+          null;
+        return NextResponse.json({
+          reply: formatTeamScheduleReply(team, nextUp, todayMatches.length > 0),
+          model: "football-data",
+          provider: "football-data.org",
+          intent: "team-schedule",
+        });
+      }
+    } catch (e) {
+      return NextResponse.json({
+        reply: `Could not load team schedule: ${(e as Error).message}`,
+        model: "error",
+        provider: "football-data.org",
+        intent: "team-schedule",
+      });
+    }
+  }
+
+  // Live scores
+  if (isLiveScoreQuery(message)) {
+    try {
+      const live = await getLiveMatches();
+      return NextResponse.json({
+        reply: formatLiveScoresReply(live),
+        model: "football-data",
+        provider: "football-data.org",
+        intent: "live",
+      });
+    } catch (e) {
+      return NextResponse.json({
+        reply: `Could not load live scores: ${(e as Error).message}`,
+        model: "error",
+        provider: "football-data.org",
+        intent: "live",
+      });
+    }
+  }
+
+  // Group standings
+  if (isStandingsQuery(message)) {
+    try {
+      const standings = await getStandings();
+      const groupMatch = message.match(/\bgroup\s+([a-l])\b/i);
+      const groupFilter = groupMatch ? `Group ${groupMatch[1].toUpperCase()}` : undefined;
+      return NextResponse.json({
+        reply: formatStandingsReply(standings, groupFilter),
+        model: "football-data",
+        provider: "football-data.org",
+        intent: "standings",
+      });
+    } catch (e) {
+      return NextResponse.json({
+        reply: `Could not load standings: ${(e as Error).message}`,
+        model: "error",
+        provider: "football-data.org",
+        intent: "standings",
+      });
+    }
+  }
+
+  // Knockout bracket / who's left
+  if (isKnockoutBracketQuery(message)) {
+    try {
+      const all = await getAllWorldCupMatches();
+      return NextResponse.json({
+        reply: formatKnockoutBracketReply(all),
+        model: "football-data",
+        provider: "football-data.org",
+        intent: "knockout",
+      });
+    } catch (e) {
+      return NextResponse.json({
+        reply: `Could not load knockout bracket: ${(e as Error).message}`,
+        model: "error",
+        provider: "football-data.org",
+        intent: "knockout",
+      });
+    }
+  }
+
+  // Team form (last N matches)
+  if (isTeamFormQuery(message)) {
+    try {
+      const team = await findTeamMentionedInMessage(message);
+      if (team) {
+        const results = await getTeamWorldCupResults(team.id, 5);
+        return NextResponse.json({
+          reply: formatTeamFormReply(team, results),
+          model: "football-data",
+          provider: "football-data.org",
+          intent: "form",
+        });
+      }
+      return NextResponse.json({
+        reply: `${ninjaGreeting()} Which team, ninja? Try "How has France performed recently?"`,
+        model: "football-data",
+        provider: "football-data.org",
+        intent: "form",
+      });
+    } catch (e) {
+      return NextResponse.json({
+        reply: `Could not load team form: ${(e as Error).message}`,
+        model: "error",
+        provider: "football-data.org",
+        intent: "form",
+      });
+    }
+  }
+
+  // Player-level stats not yet in API layer
+  if (/\b(top scorer|most assists|clean sheets?|injured|yellow cards?|goalkeeper|most saves|mbapp[eé]|messi|player of the match)\b/i.test(message)) {
+    return NextResponse.json({
+      reply: `${ninjaGreeting()} Player stats (top scorer, cards, injuries, lineups) aren't in GOALIQ's data layer yet, ninja — open a **match page** for events when live, or ask about **team form**, **standings**, or **win chances** (premium).`,
+      model: "goaliq",
+      provider: "goaliq",
+      intent: "player-stats",
+    });
+  }
+
+  // Compare teams — deep link to /compare page
+  if (/\bcompare\b/i.test(message)) {
+    const teams = await resolveTeamsFromMessage(message);
+    if (teams) {
+      const [t1, t2] = teams;
+      return NextResponse.json({
+        reply: `${ninjaGreeting()} Head to **Compare** for **${t1.name} vs ${t2.name}** — form, fixtures, and a shareable prediction card.\n\n→ [/compare?team1=${encodeURIComponent(t1.name)}&team2=${encodeURIComponent(t2.name)}](/compare)`,
+        model: "goaliq",
+        provider: "goaliq",
+        intent: "compare",
       });
     }
   }
@@ -349,15 +557,19 @@ export async function POST(request: Request) {
     }
   }
 
+  let standingsData = "";
+
   try {
-    const [live, upcoming, recent] = await Promise.all([
+    const [live, upcoming, recent, standings] = await Promise.all([
       getLiveMatches(),
       getUpcomingWorldCupMatches(12),
       getRecentResults(8),
+      getStandings(),
     ]);
     if (live.length) liveData = `LIVE NOW:\n${formatMatchesForLLM(live)}`;
     if (upcoming.length) upcomingData = `UPCOMING (not started — no scores):\n${formatMatchesForLLM(upcoming)}`;
     if (recent.length) recentData = `RECENT FINISHED:\n${formatMatchesForLLM(recent)}`;
+    if (standings.length) standingsData = `GROUP STANDINGS:\n${formatStandingsForLLM(standings)}`;
   } catch (e) {
     liveData = `Data fetch error: ${(e as Error).message}`;
   }
@@ -370,7 +582,7 @@ export async function POST(request: Request) {
     ? `Wallet connected: ${body.wallet.evmAddress}, INJ: ${body.wallet.injBalance ?? "?"}, USDC: ${body.wallet.usdcBalance ?? "?"}`
     : "Wallet not connected.";
 
-  const systemContext = [liveData, upcomingData, recentData, h2hData, matchContext, walletContext]
+  const systemContext = [liveData, upcomingData, recentData, standingsData, h2hData, matchContext, walletContext]
     .filter(Boolean)
     .join("\n\n");
 

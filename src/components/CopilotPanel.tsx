@@ -10,6 +10,7 @@ import { PaymentInfo } from "@/components/PaymentInfo";
 import { isPremiumQuery, PREMIUM_USDC } from "@/lib/payments";
 import { sendPremiumPayment } from "@/lib/usdc-payment";
 import { ChatMessageBody } from "@/components/ChatMessageBody";
+import { COPILOT_PROMPT_CHIPS } from "@/lib/copilot-prompts";
 
 interface CopilotPanelProps {
   context?: CopilotContext;
@@ -156,13 +157,7 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
     }
   }
 
-  const suggestions = [
-    "Hello!",
-    "What World Cup matches are today?",
-    "When is the next match?",
-    "So did Egypt lose?",
-    "Win chances for Switzerland",
-  ];
+  const suggestions = COPILOT_PROMPT_CHIPS;
 
   return (
     <div className="flex h-[calc(100vh-11rem)] min-h-[560px] flex-col rounded-xl border border-goaliq-border bg-goaliq-card">
@@ -239,13 +234,14 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
 
       {messages.length <= 1 && (
         <div className="flex flex-wrap gap-2 px-4 pb-2">
-          {suggestions.map((s) => (
+          {suggestions.map((chip) => (
             <button
-              key={s}
-              onClick={() => setInput(s)}
+              key={chip.query}
+              onClick={() => setInput(chip.query)}
               className="rounded-full border border-goaliq-border px-3 py-1 text-xs text-gray-400 hover:border-goaliq-accent hover:text-goaliq-accent transition-colors"
             >
-              {s}
+              {chip.label}
+              {chip.premium ? " · 0.01 USDC" : ""}
             </button>
           ))}
         </div>

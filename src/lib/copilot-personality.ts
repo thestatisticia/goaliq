@@ -21,10 +21,12 @@ export function formatGreetingReply(): string {
 }
 
 export function isTeamOutcomeQuery(message: string): boolean {
-  const hasOutcome = /\b(lost|lose|out|eliminated|beaten|defeated|won|win|winning|through|advanced|knocked\s+out|going\s+home)\b/i.test(
+  const hasOutcome = /\b(lost|lose|out|eliminated|beaten|defeated|won|win|winning|through|advanced|knocked\s+out|going\s+home|qualified|still\s+in)\b/i.test(
     message
   );
   const hasTeamHint =
-    /\b(so|did|has|have|is|are|was|were)\b/i.test(message) || message.trim().split(/\s+/).length <= 6;
+    /\b(so|did|has|have|is|are|was|were)\b/i.test(message) || message.trim().split(/\s+/).length <= 8;
+  // Don't steal progression queries ("proceed to next round")
+  if (/\b(proceed|next\s+round|next\s+stage)\b/i.test(message)) return false;
   return hasOutcome && hasTeamHint;
 }

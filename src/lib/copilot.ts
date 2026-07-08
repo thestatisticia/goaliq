@@ -143,6 +143,208 @@ export function formatProgressionReply(
   return `${ninjaGreeting()} I couldn't pin down a recent result for **${team.name}**, ninja — check the dashboard **Knockout** tab.`;
 }
 
+/** "Show group standings" / "who leads Group A?" / "how many points does Spain have?" */
+export function isStandingsQuery(message: string): boolean {
+  if (isKnockoutBracketQuery(message)) return false;
+  return /\b(standings?|group\s+[a-l]\b|top\s+of\s+group|leads?\s+group|who\s+finished\s+first|second\s+place|how\s+many\s+points|points\s+does|qualified\s+for\s+(the\s+)?knockout|through\s+to\s+the\s+knockout)\b/i.test(
+    message
+  );
+}
+
+/** Knockout bracket / who's left / round of 16 */
+export function isKnockoutBracketQuery(message: string): boolean {
+  return /\b(knockout\s+bracket|round\s+of\s+(16|32)|semifinals?|semi[\s-]?finals?|who\s+(is\s+)?in\s+the\s+(final|semifinals?)|who\s+won\s+the\s+world\s+cup|teams?\s+(are\s+)?left|still\s+in\s+the\s+(tournament|hunt)|reached\s+the\s+final|who\s+plays\s+in\s+the)\b/i.test(
+    message
+  );
+}
+
+/** Live scores — who's winning, who scored, etc. */
+export function isLiveScoreQuery(message: string): boolean {
+  if (wantsMatchAnalysis(message)) return false;
+  return /\b(live\s+now|who\s+is\s+winning|what'?s?\s+the\s+score|score\s+now|is\s+the\s+match\s+over|who\s+scored|sent\s+off|stoppage\s+time|player\s+of\s+the\s+match|matches?\s+are\s+live|live\s+scores?)\b/i.test(
+    message
+  );
+}
+
+/** "What time does Brazil play?" / "is Argentina playing today?" */
+export function isTeamScheduleQuery(message: string): boolean {
+  return (
+    (/\b(what\s+time|when)\b/i.test(message) && /\b(play|playing|kick\s*off|match)\b/i.test(message)) ||
+    /\b(is\s+.+\s+playing\s+(today|tonight))\b/i.test(message) ||
+    /\b(playing\s+today|playing\s+tonight)\b/i.test(message)
+  );
+}
+
+/** Tomorrow's matches */
+export function isTomorrowScheduleQuery(message: string): boolean {
+  return /\b(tomorrow)\b/i.test(message) && /\b(match|matches|game|fixture|playing|world cup|kick)\b/i.test(message);
+}
+
+/** Team form — last 5 matches, how has X performed */
+export function isTeamFormQuery(message: string): boolean {
+  if (wantsMatchAnalysis(message)) return false;
+  return /\b(form|last\s+\d+\s+matches?|performed\s+recently|good\s+form|in\s+better\s+form|last\s+five)\b/i.test(
+    message
+  );
+}
+
+export function formatStandingsReply(standings: import("./types").StandingGroup[], groupFilter?: string): string {
+  if (!standings.length) {
+    return `${ninjaGreeting()} Group standings aren't available yet, ninja — check back once group-stage matches are in.`;
+  }
+
+  const filtered = groupFilter
+    ? standings.filter((g) => g.group.toLowerCase().includes(groupFilter.toLowerCase()))
+    : standings;
+
+  const groups = filtered.length ? filtered : standings;
+
+  const sections: string[] = [`${ninjaGreeting()} **World Cup group standings:**`, ""];
+
+  for (const g of groups) {
+    sections.push(`**${g.group}**`);
+    for (const row of g.table.slice(0, 4)) {
+      sections.push(
+        `${row.rank}. **${row.team.name}** — ${row.points} pts (${row.all.played} played, GD ${row.goalsDiff > 0 ? "+" : ""}${row.goalsDiff})${row.form ? ` · form: ${row.form}` : ""}`
+      );
+    }
+    sections.push("");
+  }
+
+  sections.push("_Data from football-data.org. Knockout ties on the dashboard **Knockout** tab._");
+  return sections.join("\n");
+}
+
+export function formatKnockoutBracketReply(matches: Match[]): string {
+  const knockout = matches.filter((m) => {
+    const r = (m.league.round ?? "").toLowerCase();
+    return r.includes("round of") || r.includes("last") || r.includes("quarter") || r.includes("semi") || r.includes("final") || r.includes("third");
+  });
+
+  if (!knockout.length) {
+    return `${ninjaGreeting()} Knockout fixtures aren't loaded yet, ninja — check the dashboard **Knockout** tab.`;
+  }
+
+  const byRound = new Map<string, Match[]>();
+  for (const m of knockout) {
+    const round = m.league.round ?? "Knockout";
+    if (!byRound.has(round)) byRound.set(round, []);
+    byRound.get(round)!.push(m);
+  }
+
+  const stillIn = new Set<string>();
+  const upcoming = knockout.filter((m) => !["FT", "AET", "PEN"].includes(m.fixture.status.short));
+  for (const m of upcoming) {
+    if (m.teams.home.name && m.teams.home.name !== "TBD") stillIn.add(m.teams.home.name);
+    if (m.teams.away.name && m.teams.away.name !== "TBD") stillIn.add(m.teams.away.name);
+  }
+
+  const lines: string[] = [`${ninjaGreeting()} **Knockout bracket** (from live fixture data):`, ""];
+
+  for (const [round, roundMatches] of Array.from(byRound.entries())) {
+    lines.push(`**${round}**`);
+    for (const m of roundMatches.sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime())) {
+      const status = ["FT", "AET", "PEN"].includes(m.fixture.status.short)
+        ? `**${m.goals.home}–${m.goals.away}**`
+        : new Date(m.fixture.date).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC";
+      lines.push(`• ${m.teams.home.name} vs ${m.teams.away.name} — ${status}`);
+    }
+    lines.push("");
+  }
+
+  if (stillIn.size) {
+    lines.push(`**Still in the hunt (${stillIn.size} teams):** ${Array.from(stillIn).sort().join(", ")}`);
+  }
+
+  return lines.join("\n");
+}
+
+export function formatLiveScoresReply(live: Match[]): string {
+  if (!live.length) {
+    return `${ninjaGreeting()} No live World Cup matches right now, ninja. Check **Today's matches** or ask for the next fixture.`;
+  }
+
+  const lines = live.map((m) => {
+    const min = m.fixture.status.elapsed != null ? ` (${m.fixture.status.elapsed}')` : "";
+    return `• **${m.teams.home.name} ${m.goals.home ?? 0}–${m.goals.away ?? 0} ${m.teams.away.name}**${min} — ${m.fixture.status.long} · ${m.league.round ?? ""}`;
+  });
+
+  return [
+    `${ninjaGreeting()} **Live now:**`,
+    "",
+    ...lines,
+    "",
+    "_Open a match page for goals, cards, and stats._",
+  ].join("\n");
+}
+
+export function formatTeamScheduleReply(
+  team: { name: string },
+  match: Match | null,
+  playingToday: boolean
+): string {
+  if (!match) {
+    return `${ninjaGreeting()} **${team.name}** don't have an upcoming World Cup fixture on the calendar right now, ninja — they may be out or between rounds.`;
+  }
+
+  const dt = new Date(match.fixture.date);
+  const when =
+    dt.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) +
+    " at " +
+    dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) +
+    " UTC";
+  const opp = match.teams.home.name === team.name ? match.teams.away.name : match.teams.home.name;
+  const venue = match.fixture.venue?.name ? ` at ${match.fixture.venue.name}` : "";
+
+  if (playingToday) {
+    return `${ninjaGreeting()} Yes — **${team.name}** play **${opp}** today (${when})${venue}. ${match.league.round ?? ""}`;
+  }
+
+  return `${ninjaGreeting()} **${team.name}** vs **${opp}** — ${when}${venue}. ${match.league.round ?? ""}`;
+}
+
+export function formatTeamFormReply(team: { id?: number; name: string }, results: Match[]): string {
+  if (!results.length) {
+    return `${ninjaGreeting()} No finished World Cup matches found for **${team.name}** yet, ninja.`;
+  }
+
+  const lines = results.map((m) => {
+    const isHome =
+      (team.id != null && m.teams.home.id === team.id) || m.teams.home.name === team.name;
+    const gf = isHome ? m.goals.home! : m.goals.away!;
+    const ga = isHome ? m.goals.away! : m.goals.home!;
+    const wdl = gf > ga ? "W" : gf < ga ? "L" : "D";
+    const opp = isHome ? m.teams.away.name : m.teams.home.name;
+    return `• ${wdl} vs **${opp}** ${gf}–${ga} (${m.league.round ?? "WC"})`;
+  });
+
+  const wins = results.filter((m) => {
+    const isHome = m.teams.home.name === team.name;
+    const gf = isHome ? m.goals.home! : m.goals.away!;
+    const ga = isHome ? m.goals.away! : m.goals.home!;
+    return gf > ga;
+  }).length;
+
+  return [
+    `${ninjaGreeting()} **${team.name}** — last ${results.length} World Cup matches:`,
+    "",
+    ...lines,
+    "",
+    `Record: **${wins}W** in last ${results.length}. Want win chances for their next match? Ask for premium analysis (0.01 USDC).`,
+  ].join("\n");
+}
+
+export function formatStandingsForLLM(standings: import("./types").StandingGroup[]): string {
+  return standings
+    .map((g) => {
+      const rows = g.table
+        .map((r) => `${r.rank}. ${r.team.name} ${r.points}pts (${r.all.played}P ${r.all.win}W ${r.all.draw}D ${r.all.lose}L GD${r.goalsDiff})`)
+        .join("\n");
+      return `${g.group}:\n${rows}`;
+    })
+    .join("\n\n");
+}
+
 export { isGreetingMessage, formatGreetingReply, isTeamOutcomeQuery, ninjaGreeting } from "./copilot-personality";
 
 export function formatTeamOutcomeReply(team: { id: number; name: string }, match: Match): string {
