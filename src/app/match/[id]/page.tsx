@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { Match, MatchEvent, TeamMatchStatistics } from "@/lib/types";
 import { isLive, formatMatchTime, decidedOnPenalties, hasPenaltyScore, isPenaltyShootout, formatMatchScore, regulationScore, cn } from "@/lib/utils";
+import { MatchBriefing } from "@/components/MatchBriefing";
 import { PremiumUnlock } from "@/components/PremiumUnlock";
 import { AskCopilotCard } from "@/components/AskCopilotCard";
 import { MatchEventsList, MatchStatisticsGrid } from "@/components/MatchStatsPanel";
@@ -139,6 +140,8 @@ export default function MatchPage() {
         {referee && <p className="text-xs text-gray-600 mt-1">Referee: {referee}</p>}
       </div>
 
+      <MatchBriefing matchId={id} />
+
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-goaliq-border bg-goaliq-card p-5">
           <h2 className="font-semibold mb-3">Match Events</h2>
@@ -157,11 +160,13 @@ export default function MatchPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <PremiumUnlock matchId={id} type="analysis" />
+        <PremiumUnlock matchId={id} type="analysis" homeTeamName={match.teams.home.name} awayTeamName={match.teams.away.name} />
         <PremiumUnlock
           matchId={id}
           team1Id={match.teams.home.id}
           team2Id={match.teams.away.id}
+          homeTeamName={match.teams.home.name}
+          awayTeamName={match.teams.away.name}
           type="h2h"
         />
       </div>

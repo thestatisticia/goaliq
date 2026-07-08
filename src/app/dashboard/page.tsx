@@ -1,5 +1,7 @@
 import { DashboardTabs } from "@/components/DashboardTabs";
 import { StatsBar } from "@/components/StatsBar";
+import { DailyDigest } from "@/components/DailyDigest";
+import { PredictionHistory } from "@/components/PredictionHistory";
 
 export default function DashboardPage() {
   return (
@@ -13,6 +15,10 @@ export default function DashboardPage() {
       </header>
 
       <StatsBar />
+
+      <DailyDigest />
+
+      <PredictionHistory />
 
       <section className="rounded-2xl border border-goaliq-border bg-goaliq-card/50 p-4 shadow-card sm:p-6">
         <DashboardTabs />

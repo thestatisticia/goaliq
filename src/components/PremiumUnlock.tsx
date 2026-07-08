@@ -5,7 +5,9 @@ import { Lock, Unlock, Loader2, AlertCircle, Coins } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 import { usePaymentConfig } from "@/context/PaymentConfigContext";
 import Link from "next/link";
-import { PaymentInfo } from "@/components/PaymentInfo";
+import { PaymentInfo, PaymentReceipt } from "@/components/PaymentInfo";
+import { PredictionShareCard } from "@/components/PredictionShareCard";
+import { savePredictionReceipt } from "@/lib/prediction-receipts";
 import { PREMIUM_USDC } from "@/lib/payments";
 import { sendPremiumPayment } from "@/lib/usdc-payment";
 
@@ -13,10 +15,12 @@ interface PremiumUnlockProps {
   matchId: number;
   team1Id?: number;
   team2Id?: number;
+  homeTeamName?: string;
+  awayTeamName?: string;
   type: "analysis" | "h2h";
 }
 
-export function PremiumUnlock({ matchId, team1Id, team2Id, type }: PremiumUnlockProps) {
+export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTeamName, type }: PremiumUnlockProps) {
   const { isConnected, evmAddress, usdcBalance, connect, connecting, refreshBalance } = useWallet();
   const { paymentsEnabled, paymentWallet } = usePaymentConfig();
   const [data, setData] = useState<Record<string, unknown> | null>(null);
@@ -59,6 +63,28 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, type }: PremiumUnlock
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? `Error ${res.status}`);
       setData(json);
+
+      const match = json.match as { teams?: { home: { name: string }; away: { name: string } }; league?: { round?: string } } | undefined;
+      const pred = json.prediction as {
+        percent?: { home: string; away: string; draw: string };
+        home?: { name: string };
+        away?: { name: string };
+      } | null;
+
+      const home = homeTeamName ?? match?.teams?.home?.name ?? pred?.home?.name ?? "Home";
+      const away = awayTeamName ?? match?.teams?.away?.name ?? pred?.away?.name ?? "Away";
+
+      savePredictionReceipt({
+        matchId,
+        homeTeam: home,
+        awayTeam: away,
+        type,
+        txHash: hash,
+        evmAddress,
+        percentHome: pred?.percent?.home,
+        percentAway: pred?.percent?.away,
+        percentDraw: pred?.percent?.draw,
+      });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -93,8 +119,33 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, type }: PremiumUnlock
       )}
 
       {data ? (
-        <div className="text-xs bg-black/30 rounded-lg p-3 overflow-auto max-h-96 text-gray-300 whitespace-pre-wrap leading-relaxed">
-          {typeof data.report === "string" ? data.report : JSON.stringify(data, null, 2)}
+        <div className="space-y-3">
+          {(() => {
+            const pred = data.prediction as {
+              percent?: { home: string; away: string; draw: string };
+              home?: { name: string };
+              away?: { name: string };
+            } | null;
+            const match = data.match as { teams?: { home: { name: string }; away: { name: string } }; league?: { round?: string } } | undefined;
+            if (pred?.percent && type === "analysis") {
+              const home = homeTeamName ?? match?.teams?.home?.name ?? pred.home?.name ?? "Home";
+              const away = awayTeamName ?? match?.teams?.away?.name ?? pred.away?.name ?? "Away";
+              return (
+                <PredictionShareCard
+                  homeTeam={home}
+                  awayTeam={away}
+                  percentHome={pred.percent.home}
+                  percentAway={pred.percent.away}
+                  percentDraw={pred.percent.draw}
+                  round={match?.league?.round}
+                />
+              );
+            }
+            return null;
+          })()}
+          <div className="text-xs bg-black/30 rounded-lg p-3 overflow-auto max-h-96 text-gray-300 whitespace-pre-wrap leading-relaxed">
+            {typeof data.report === "string" ? data.report : JSON.stringify(data, null, 2)}
+          </div>
         </div>
       ) : (
         <button
@@ -107,9 +158,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, type }: PremiumUnlock
         </button>
       )}
 
-      {txHash && (
-        <p className="text-[10px] text-goaliq-accent font-mono break-all">Tx: {txHash}</p>
-      )}
+      {txHash && <PaymentReceipt txHash={txHash} />}
       {error && <p className="text-xs text-goaliq-live">{error}</p>}
     </div>
   );

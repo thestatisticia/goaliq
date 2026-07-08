@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, MessageSquare, Wallet } from "lucide-react";
+import { LayoutDashboard, MessageSquare, Wallet, GitCompare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { KeplrWallet } from "@/components/KeplrWallet";
 import { GoaliqWordmark } from "@/components/GoaliqWordmark";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/compare", label: "Compare", icon: GitCompare },
   { href: "/copilot", label: "AI Copilot", icon: MessageSquare },
   { href: "/fund", label: "Fund Wallet", icon: Wallet },
 ];
