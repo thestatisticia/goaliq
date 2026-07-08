@@ -1,6 +1,7 @@
 import { WC_LEAGUE_ID } from "./constants";
 import { decidedOnPenalties, hasPenaltyScore, isPenaltyShootout } from "@/lib/utils";
 import { dateWindowForTimeZone, formatDateInTimeZone, resolveTimeZone } from "./calendar";
+import { serverEnv, serverEnvStatus } from "./server-env";
 import { getCached, getCachedStale, setCached, CACHE_TTL } from "./cache";
 import type { Match, StandingGroup, MatchEvent, MatchDetail } from "./types";
 import { getFallbackMatches, WC_FALLBACK_TEAMS, type WorldCupTeam } from "./wc-fallback";
@@ -28,7 +29,7 @@ const TOURNAMENT_END = "2026-07-31";
 export type DashboardSource = "football-data" | "api-football" | "fallback" | "misconfigured";
 
 function allowDevFallback(): boolean {
-  return process.env.NODE_ENV !== "production" || process.env.ALLOW_WC_FALLBACK === "true";
+  return process.env.NODE_ENV !== "production" || serverEnv("ALLOW_WC_FALLBACK") === "true";
 }
 
 function isAnyFootballApiConfigured(): boolean {
@@ -550,10 +551,12 @@ export async function getDashboardData(opts?: { timeZone?: string }) {
   let source: DashboardSource = isFootballDataConfigured() ? "football-data" : "api-football";
   let warning: string | undefined;
 
+  const envStatus = serverEnvStatus();
+
   if (!configured) {
     source = "misconfigured";
     warning =
-      "Football data API is not configured. Add FOOTBALL_DATA_KEY in your Vercel project settings (Environment Variables).";
+      "Football data API is not configured. In Vercel → Settings → Environment Variables, add FOOTBALL_DATA_KEY (exact name, no quotes), enable Production, then Redeploy.";
   } else if (tournament.length > 0 && tournament.length < 20) {
     source = "fallback";
     warning = "Showing limited demo data — live football API is unavailable.";
@@ -572,6 +575,7 @@ export async function getDashboardData(opts?: { timeZone?: string }) {
     source,
     configured,
     warning,
+    envStatus,
     updatedAt: new Date().toISOString(),
     scheduleDate: today,
     timeZone,

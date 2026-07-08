@@ -1,3 +1,5 @@
+import { serverEnv } from "./server-env";
+
 export const LLM_MODELS = {
   groq: [
     { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B (Groq)", provider: "groq" as const, free: true },
@@ -18,14 +20,14 @@ export interface LLMMessage {
 
 export function getAvailableModels() {
   const models = [];
-  if (process.env.GROQ_API_KEY) models.push(...LLM_MODELS.groq);
-  if (process.env.GEMINI_API_KEY) models.push(...LLM_MODELS.gemini);
+  if (serverEnv("GROQ_API_KEY")) models.push(...LLM_MODELS.groq);
+  if (serverEnv("GEMINI_API_KEY")) models.push(...LLM_MODELS.gemini);
   return models;
 }
 
 export function getDefaultModel(): { id: string; provider: LLMProvider } {
-  if (process.env.GROQ_API_KEY) return { id: "llama-3.1-8b-instant", provider: "groq" };
-  if (process.env.GEMINI_API_KEY) return { id: "gemini-2.0-flash", provider: "gemini" };
+  if (serverEnv("GROQ_API_KEY")) return { id: "llama-3.1-8b-instant", provider: "groq" };
+  if (serverEnv("GEMINI_API_KEY")) return { id: "gemini-2.0-flash", provider: "gemini" };
   return { id: "fallback", provider: "fallback" };
 }
 
@@ -33,7 +35,7 @@ async function callGroq(model: string, messages: LLMMessage[]): Promise<string> 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      Authorization: `Bearer ${serverEnv("GROQ_API_KEY")}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 1024 }),
@@ -49,7 +51,7 @@ async function callGemini(model: string, messages: LLMMessage[]): Promise<string
     .filter((m) => m.role !== "system")
     .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${serverEnv("GEMINI_API_KEY")}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -73,22 +75,22 @@ export async function chatCompletion(
     ? { id: modelId, provider }
     : getDefaultModel();
 
-  if (selected.provider === "groq" && process.env.GROQ_API_KEY) {
+  if (selected.provider === "groq" && serverEnv("GROQ_API_KEY")) {
     const reply = await callGroq(selected.id, messages);
     return { reply, model: selected.id, provider: "groq" };
   }
 
-  if (selected.provider === "gemini" && process.env.GEMINI_API_KEY) {
+  if (selected.provider === "gemini" && serverEnv("GEMINI_API_KEY")) {
     const reply = await callGemini(selected.id, messages);
     return { reply, model: selected.id, provider: "gemini" };
   }
 
-  if (process.env.GROQ_API_KEY) {
+  if (serverEnv("GROQ_API_KEY")) {
     const reply = await callGroq("llama-3.1-8b-instant", messages);
     return { reply, model: "llama-3.1-8b-instant", provider: "groq" };
   }
 
-  if (process.env.GEMINI_API_KEY) {
+  if (serverEnv("GEMINI_API_KEY")) {
     const reply = await callGemini("gemini-2.0-flash", messages);
     return { reply, model: "gemini-2.0-flash", provider: "gemini" };
   }

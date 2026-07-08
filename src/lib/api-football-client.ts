@@ -1,3 +1,5 @@
+import { serverEnv } from "./server-env";
+
 const BASE_URL = "https://v3.football.api-sports.io";
 
 /** Keys marked exhausted for this server process (daily quota hit). */
@@ -6,19 +8,19 @@ const exhaustedKeys = new Set<string>();
 function parseKeysFromEnv(): string[] {
   const keys: string[] = [];
 
-  const list = process.env.API_FOOTBALL_KEYS;
+  const list = serverEnv("API_FOOTBALL_KEYS");
   if (list) {
     keys.push(
       ...list
         .split(",")
         .map((k) => k.trim())
-        .filter((k) => k && k !== "your_api_key_here")
+        .filter((k) => k && !keys.includes(k))
     );
   }
 
   for (const envName of ["API_FOOTBALL_KEY", "API_FOOTBALL_KEY_2", "API_FOOTBALL_KEY_3"]) {
-    const value = process.env[envName]?.trim();
-    if (value && value !== "your_api_key_here" && !keys.includes(value)) {
+    const value = serverEnv(envName);
+    if (value && !keys.includes(value)) {
       keys.push(value);
     }
   }

@@ -1,3 +1,5 @@
+import { serverEnv } from "./server-env";
+
 /** Calendar helpers — server runs UTC on Vercel; clients pass IANA timezone via ?tz= */
 
 export function resolveTimeZone(tz?: string | null): string {
@@ -10,7 +12,7 @@ export function resolveTimeZone(tz?: string | null): string {
       /* invalid IANA name */
     }
   }
-  const envTz = process.env.WC_TIMEZONE?.trim();
+  const envTz = serverEnv("WC_TIMEZONE");
   if (envTz) {
     try {
       Intl.DateTimeFormat(undefined, { timeZone: envTz });

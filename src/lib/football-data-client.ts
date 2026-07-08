@@ -1,4 +1,5 @@
 import { getCached, setCached, CACHE_TTL } from "./cache";
+import { serverEnv } from "./server-env";
 
 const BASE_URL = "https://api.football-data.org/v4";
 
@@ -94,9 +95,7 @@ export interface FdStandingsResponse {
 }
 
 function getFootballDataKey(): string | null {
-  const key = process.env.FOOTBALL_DATA_KEY?.trim();
-  if (!key) return null;
-  return key;
+  return serverEnv("FOOTBALL_DATA_KEY") ?? null;
 }
 
 export function isFootballDataConfigured(): boolean {
