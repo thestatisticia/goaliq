@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, MessageSquare, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { KeplrWallet } from "@/components/KeplrWallet";
+import { GoaliqWordmark } from "@/components/GoaliqWordmark";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -18,18 +19,8 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-goaliq-border/80 bg-goaliq-bg/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
-        <Link href="/" className="group flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-goaliq-accent to-goaliq-accentDim shadow-glow">
-            <span className="text-sm font-black text-goaliq-bg">G</span>
-          </div>
-          <div className="flex flex-col leading-none">
-            <span className="text-lg font-bold tracking-tight">
-              GOAL<span className="text-goaliq-accent">IQ</span>
-            </span>
-            <span className="text-[10px] font-medium uppercase tracking-widest text-goaliq-muted">
-              World Cup Intelligence
-            </span>
-          </div>
+        <Link href="/" className="group transition-opacity hover:opacity-90">
+          <GoaliqWordmark size="md" />
         </Link>
 
         <nav className="flex items-center gap-1.5">

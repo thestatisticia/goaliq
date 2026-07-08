@@ -2,6 +2,7 @@ import { WC_LEAGUE_ID } from "./constants";
 import { decidedOnPenalties, hasPenaltyScore, isPenaltyShootout } from "@/lib/utils";
 import { dateWindowForTimeZone, formatDateInTimeZone, resolveTimeZone } from "./calendar";
 import { serverEnv, serverEnvStatus } from "./server-env";
+import { applyKnockoutWinners, pickRicherTeam, getKnockoutRoundOrder } from "./knockout-bracket";
 import { getCached, getCachedStale, setCached, CACHE_TTL } from "./cache";
 import type { Match, StandingGroup, MatchEvent, MatchDetail } from "./types";
 import { getFallbackMatches, WC_FALLBACK_TEAMS, isFallbackDataset, type WorldCupTeam } from "./wc-fallback";
@@ -197,6 +198,45 @@ function sortMatches(matches: Match[]): Match[] {
 }
 
 /** Overlay fresher scores/status onto the cached tournament list. */
+function mergeMatchRecords(existing: Match, overlay: Match): Match {
+  const existingRank = statusRank(existing.fixture.status.short);
+  const overlayRank = statusRank(overlay.fixture.status.short);
+
+  let base = existing;
+  let fresh = overlay;
+  if (overlayRank < existingRank) return existing;
+  if (overlayRank > existingRank) {
+    base = overlay;
+    fresh = existing;
+  } else if (existingRank === 3 && hasScore(existing) && !hasScore(overlay)) {
+    return existing;
+  } else {
+    base = overlay;
+    fresh = existing;
+  }
+
+  const merged: Match = {
+    ...base,
+    teams: {
+      home: pickRicherTeam(existing.teams.home, overlay.teams.home),
+      away: pickRicherTeam(existing.teams.away, overlay.teams.away),
+    },
+    goals: {
+      home: base.goals?.home ?? fresh.goals?.home ?? null,
+      away: base.goals?.away ?? fresh.goals?.away ?? null,
+      halfTime: base.goals?.halfTime ?? fresh.goals?.halfTime,
+      extraTime: base.goals?.extraTime ?? fresh.goals?.extraTime,
+      penalties: base.goals?.penalties ?? fresh.goals?.penalties,
+    },
+  };
+
+  if (hasScore(overlay) && !hasScore(base)) {
+    merged.goals = { ...overlay.goals, home: overlay.goals.home, away: overlay.goals.away };
+  }
+
+  return merged;
+}
+
 function mergeMatchesById(base: Match[], overlays: Match[]): Match[] {
   if (!overlays.length) return base;
   const byId = new Map(base.map((m) => [m.fixture.id, m]));
@@ -206,13 +246,7 @@ function mergeMatchesById(base: Match[], overlays: Match[]): Match[] {
       byId.set(overlay.fixture.id, overlay);
       continue;
     }
-    const existingRank = statusRank(existing.fixture.status.short);
-    const overlayRank = statusRank(overlay.fixture.status.short);
-    if (existingRank > overlayRank) continue;
-    if (existingRank === overlayRank && existingRank === 3 && hasScore(existing) && !hasScore(overlay)) {
-      continue;
-    }
-    byId.set(overlay.fixture.id, overlay);
+    byId.set(overlay.fixture.id, mergeMatchRecords(existing, overlay));
   }
   return sortMatches(Array.from(byId.values()));
 }
@@ -288,11 +322,22 @@ async function buildFreshTournament(timeZone?: string): Promise<Match[]> {
     return hours >= 0 && hours < 3;
   });
 
+  // Refresh knockout / recent ties still stuck on NS after kickoff (up to 48h)
+  const staleKnockout = merged.filter((m) => {
+    if (isFinishedMatch(m) || isLiveMatch(m)) return false;
+    const kickoff = new Date(m.fixture.date).getTime();
+    const hours = (now - kickoff) / 3_600_000;
+    const isKo = getKnockoutRoundOrder(m.league.round ?? "") >= 0;
+    return hours >= 0 && hours < (isKo ? 48 : 3);
+  });
+
   const toRefresh = Array.from(
-    new Map([...todayMatches, ...recentlyStarted].map((m) => [m.fixture.id, m])).values()
+    new Map([...todayMatches, ...recentlyStarted, ...staleKnockout].map((m) => [m.fixture.id, m])).values()
   );
   const refreshed = await refreshStaleTodayMatches(toRefresh);
   merged = mergeMatchesById(merged, refreshed);
+
+  merged = applyKnockoutWinners(merged);
 
   return merged;
 }
@@ -319,7 +364,7 @@ let lastKnownTournament: Match[] | null = null;
 export async function loadWorldCupTournamentMatches(): Promise<Match[]> {
   const cacheKey = `wc-tournament-${TOURNAMENT_START}-${TOURNAMENT_END}`;
   const cached = getCached<Match[]>(cacheKey);
-  if (tournamentCacheUsable(cached)) return cached;
+  if (tournamentCacheUsable(cached)) return applyKnockoutWinners(cached);
 
   if (!tournamentPromise) {
     tournamentPromise = (async () => {
@@ -337,10 +382,11 @@ export async function loadWorldCupTournamentMatches(): Promise<Match[]> {
       if (isFootballDataConfigured()) {
         try {
           const fd = await getFdWorldCupMatches();
-          const mapped = fd.map(mapFdMatch).sort(
+          let mapped = fd.map(mapFdMatch).sort(
             (a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime()
           );
           if (mapped.length > 0) {
+            mapped = applyKnockoutWinners(mapped);
             if (mapped.length >= 50) lastKnownTournament = mapped;
             setCached(cacheKey, mapped, CACHE_TTL.tournament);
             return mapped;

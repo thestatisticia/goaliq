@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { PREMIUM_USDC } from "@/lib/payments";
 import { LandingLiveTicker } from "@/components/LandingLiveTicker";
+import { GoaliqWordmark } from "@/components/GoaliqWordmark";
 
 export function LandingPage() {
   return (
@@ -206,10 +207,8 @@ function HeroMockup() {
   return (
     <div className="relative rounded-2xl border border-goaliq-border bg-goaliq-card/60 p-4 shadow-card backdrop-blur-sm">
       <div className="mb-3 flex items-center gap-2 border-b border-goaliq-border/50 pb-3">
-        <div className="h-8 w-8 rounded-lg bg-goaliq-accent/20 flex items-center justify-center text-xs font-black text-goaliq-accent">
-          G
-        </div>
-        <span className="text-sm font-semibold">GOALIQ Dashboard</span>
+        <GoaliqWordmark size="sm" showTagline={false} />
+        <span className="text-sm font-medium text-goaliq-muted">Dashboard</span>
         <span className="ml-auto flex items-center gap-1 text-xs text-goaliq-live">
           <span className="h-1.5 w-1.5 rounded-full bg-goaliq-live animate-pulse" /> Live
         </span>
