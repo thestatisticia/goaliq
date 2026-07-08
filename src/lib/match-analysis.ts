@@ -2,9 +2,11 @@ import {
   getFixturePrediction,
   getHeadToHead,
   getTeamWorldCupResults,
+  getUpcomingWorldCupMatches,
   loadWorldCupTournamentMatches,
   type FixturePrediction,
 } from "./football-api";
+import { ninjaGreeting } from "./copilot-personality";
 import { getFallbackPrediction, findFallbackFixture } from "./prediction-fallback";
 import { resolveTeamsFromMessage, searchTeam } from "./team-resolver";
 import type { Match } from "./types";
@@ -201,6 +203,70 @@ export async function buildPremiumReportForTeams(
   ].join("\n");
 
   return { team1, team2, fixtureId: fixture?.fixture.id ?? null, prediction: null, report };
+}
+
+function formatRecentForm(results: Match[], teamId: number): string {
+  if (!results.length) return "no finished World Cup games in feed";
+  return results
+    .map((m) => {
+      const isHome = m.teams.home.id === teamId;
+      const gf = isHome ? m.goals.home! : m.goals.away!;
+      const ga = isHome ? m.goals.away! : m.goals.home!;
+      const r = gf > ga ? "W" : gf < ga ? "L" : "D";
+      const opp = isHome ? m.teams.away.name : m.teams.home.name;
+      return `${r} vs ${opp} (${gf}-${ga})`;
+    })
+    .join(", ");
+}
+
+/** Free preview of upcoming knockouts using real WC results — no invented scores. */
+export async function buildFreeUpcomingAnalysis(limit = 4): Promise<string> {
+  const upcoming = await getUpcomingWorldCupMatches(12);
+  const fixtures = upcoming
+    .filter((m) => {
+      const home = m.teams.home.name?.trim() || "TBD";
+      const away = m.teams.away.name?.trim() || "TBD";
+      return home !== "TBD" && away !== "TBD";
+    })
+    .slice(0, limit);
+
+  if (!fixtures.length) {
+    return `${ninjaGreeting()} No upcoming fixtures with both teams confirmed yet, ninja — check back once the bracket is set.`;
+  }
+
+  const sections: string[] = [
+    `${ninjaGreeting()} Here's a **preview of the next World Cup matches** (from live tournament data — not started yet):`,
+    "",
+  ];
+
+  for (const m of fixtures) {
+    const [homeResults, awayResults] = await Promise.all([
+      getTeamWorldCupResults(m.teams.home.id, 3),
+      getTeamWorldCupResults(m.teams.away.id, 3),
+    ]);
+    const dt = new Date(m.fixture.date);
+    const when = `${dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC`;
+
+    sections.push(`### ${m.teams.home.name} vs ${m.teams.away.name}`);
+    sections.push(`**${m.league.round ?? "Knockout"}** · ${when}`);
+    sections.push(`- **${m.teams.home.name}** form: ${formatRecentForm(homeResults, m.teams.home.id)}`);
+    sections.push(`- **${m.teams.away.name}** form: ${formatRecentForm(awayResults, m.teams.away.id)}`);
+    sections.push("");
+  }
+
+  const tbdCount = upcoming.filter(
+    (m) => m.teams.home.name === "TBD" || m.teams.away.name === "TBD"
+  ).length;
+  if (tbdCount > 0) {
+    sections.push(`_${tbdCount} later fixture${tbdCount === 1 ? "" : "s"} still waiting on bracket results (TBD vs TBD)._`);
+    sections.push("");
+  }
+
+  sections.push(
+    "_Want win % and head-to-head? Ask **\"win chances for France vs Morocco\"** (0.01 USDC) or unlock on the match page._"
+  );
+
+  return sections.join("\n");
 }
 
 export async function buildPremiumMatchReport(

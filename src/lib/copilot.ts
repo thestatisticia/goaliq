@@ -22,9 +22,27 @@ export function isTodayScheduleQuery(message: string): boolean {
   return hasToday && (hasMatch || asksWorldCup);
 }
 
+/** User wants preview / analysis, not just kickoff times. */
+export function wantsMatchAnalysis(message: string): boolean {
+  return /\b(analys[ei]s|analy[sz]e|preview|breakdown|insight|outlook|prediction|predict|win\s+chance|who\s+will\s+win|odds|forecast|tell\s+me\s+about)\b/i.test(
+    message
+  );
+}
+
+/** "Analysis for the next matches" — previews with form, not a bare fixture list. */
+export function isUpcomingAnalysisQuery(message: string): boolean {
+  if (!wantsMatchAnalysis(message)) return false;
+  const asksUpcoming =
+    /\b(next|upcoming|future|knockout|quarter|semi|final|round)\b/i.test(message) ||
+    /\b(these|those)\s+match/i.test(message);
+  const asksMatch = /\b(match|matches|game|games|fixture|fixtures)\b/i.test(message);
+  return asksUpcoming && asksMatch;
+}
+
 /** "When is the next match?" / upcoming schedule — API only, not LLM. */
 export function isNextMatchesQuery(message: string): boolean {
   if (isTodayScheduleQuery(message)) return false;
+  if (wantsMatchAnalysis(message)) return false;
   const asksWhen = /\b(next|upcoming|when|future|see)\b/i.test(message);
   const asksMatch = /\b(match|matches|game|games|fixture|fixtures|kick.?off|play|round)\b/i.test(message);
   return asksWhen && asksMatch;

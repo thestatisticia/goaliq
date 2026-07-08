@@ -15,6 +15,7 @@ import {
   buildCopilotResponse,
   isTodayScheduleQuery,
   isNextMatchesQuery,
+  isUpcomingAnalysisQuery,
   formatTodayScheduleReply,
   formatUpcomingScheduleReply,
   isSwapOrTradeQuery,
@@ -26,7 +27,7 @@ import {
   ninjaGreeting,
 } from "@/lib/copilot";
 import { resolveHeadToHead, findTeamMentionedInMessage } from "@/lib/team-resolver";
-import { buildPremiumMatchReport } from "@/lib/match-analysis";
+import { buildPremiumMatchReport, buildPremiumReportForTeams, buildFreeUpcomingAnalysis } from "@/lib/match-analysis";
 import { isPremiumQuery } from "@/lib/payments";
 import type { CopilotContext } from "@/lib/types";
 
@@ -140,7 +141,71 @@ export async function POST(request: Request) {
     }
   }
 
-  // Next / upcoming matches — structured API only (no invented scores)
+  // Analysis for upcoming matches — previews with form (not a bare schedule list)
+  if (isUpcomingAnalysisQuery(message)) {
+    try {
+      if (isPremium && txHash) {
+        const upcoming = await getUpcomingWorldCupMatches(8);
+        const withTeams = upcoming.filter(
+          (m) => m.teams.home.name !== "TBD" && m.teams.away.name !== "TBD"
+        );
+        const reports: string[] = [];
+        for (const m of withTeams.slice(0, 3)) {
+          const premium = await buildPremiumReportForTeams(m.teams.home, m.teams.away);
+          reports.push(premium.report);
+        }
+        if (reports.length) {
+          return NextResponse.json({
+            reply: reports.join("\n\n---\n\n"),
+            model: "premium-analysis",
+            provider: "api-football",
+            intent: "upcoming-analysis",
+          });
+        }
+      }
+
+      const preview = await buildFreeUpcomingAnalysis(4);
+
+      try {
+        const { reply, model, provider: usedProvider } = await chatCompletion(
+          [
+            {
+              role: "system",
+              content: `${COPILOT_SYSTEM_PROMPT}\n\n--- UPCOMING MATCH DATA (use only this) ---\n${preview}`,
+            },
+            {
+              role: "user",
+              content: `${message}\n\nGive a friendly 2–3 sentence preview per match. Do not invent scores or results.`,
+            },
+          ],
+          modelId,
+          provider
+        );
+        return NextResponse.json({
+          reply,
+          model,
+          provider: usedProvider,
+          intent: "upcoming-analysis",
+        });
+      } catch {
+        return NextResponse.json({
+          reply: preview,
+          model: "football-data",
+          provider: "football-data.org",
+          intent: "upcoming-analysis",
+        });
+      }
+    } catch (e) {
+      return NextResponse.json({
+        reply: `Could not build match previews: ${(e as Error).message}`,
+        model: "error",
+        provider: "football-data.org",
+        intent: "upcoming-analysis",
+      });
+    }
+  }
+
+  // Next / upcoming matches — schedule only (no invented scores)
   if (isNextMatchesQuery(message)) {
     try {
       const upcoming = await getUpcomingWorldCupMatches(12);
