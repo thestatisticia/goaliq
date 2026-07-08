@@ -14,7 +14,7 @@ import {
   BarChart3,
   Shield,
 } from "lucide-react";
-import { PREMIUM_USDC } from "@/lib/payments";
+import { MIN_PREMIUM_USDC, PRICING } from "@/lib/payments";
 import { LandingLiveTicker } from "@/components/LandingLiveTicker";
 import { GoaliqWordmark } from "@/components/GoaliqWordmark";
 
@@ -69,7 +69,7 @@ export function LandingPage() {
         <div className="mx-auto grid max-w-4xl grid-cols-2 gap-6 px-4 sm:grid-cols-4 sm:px-6">
           <Stat value="48" label="World Cup teams" />
           <Stat value="104" label="Tournament matches" />
-          <Stat value={`${PREMIUM_USDC}`} label="USDC per insight" />
+          <Stat value={`${MIN_PREMIUM_USDC}+`} label="USDC per insight" />
           <Stat value="Live" label="Score updates" accent />
         </div>
       </section>
@@ -107,7 +107,7 @@ export function LandingPage() {
                 text="Hey ninja! France vs Morocco kicks off at 20:00 UTC — check the Upcoming tab for the full list."
               />
               <MockChat role="user" text="Win chances for Switzerland?" />
-              <MockChat role="assistant" text={`Premium insight · ${PREMIUM_USDC} USDC via Keplr`} muted />
+              <MockChat role="assistant" text={`Quick Insight · ${PRICING.insight.usdc} USDC via Keplr`} muted />
             </div>
           </ProductPanel>
 
@@ -132,7 +132,7 @@ export function LandingPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <FlowStep step={1} icon={<MessageSquare className="h-5 w-5" />} title="Ask AI" desc="Request win chances or H2H analysis" />
             <FlowStep step={2} icon={<Sparkles className="h-5 w-5" />} title="Unlock insight" desc="GOALIQ detects a premium query" />
-            <FlowStep step={3} icon={<Wallet className="h-5 w-5" />} title="Approve USDC" desc={`${PREMIUM_USDC} USDC in Keplr on Injective`} />
+            <FlowStep step={3} icon={<Wallet className="h-5 w-5" />} title="Approve USDC" desc={`from ${MIN_PREMIUM_USDC} USDC in Keplr on Injective`} />
             <FlowStep step={4} icon={<BarChart3 className="h-5 w-5" />} title="Get report" desc="Structured stats delivered instantly" />
           </div>
         </div>
@@ -161,10 +161,15 @@ export function LandingPage() {
           />
           <PricingCard
             title="Premium"
-            price={`${PREMIUM_USDC} USDC / insight`}
+            price={`from ${MIN_PREMIUM_USDC} USDC`}
             accent="border-goaliq-gold/30"
             highlight
-            items={["Win probability & form", "Head-to-head analysis", "Match page unlock", "Keplr on-chain payment"]}
+            items={[
+              `Quick Insight · ${PRICING.insight.usdc} USDC`,
+              `Deep Report · ${PRICING.report.usdc} USDC`,
+              `Tournament Forecast · ${PRICING.forecast.usdc} USDC`,
+              "Keplr on-chain payment",
+            ]}
           />
         </div>
       </section>

@@ -27,10 +27,11 @@ function getEthereumProvider(): unknown {
   return window.keplr?.ethereum ?? null;
 }
 
-/** Send 0.01 testnet USDC to the configured payment wallet via Keplr (Injective EVM) */
+/** Send testnet USDC to the configured payment wallet via Keplr (Injective EVM) */
 export async function sendPremiumPayment(
   fromAddress: `0x${string}`,
-  payTo: `0x${string}`
+  payTo: `0x${string}`,
+  amountUsdc: number = PREMIUM_USDC
 ): Promise<Hash> {
   if (!payTo) {
     throw new Error("Premium payments are not available right now.");
@@ -83,7 +84,7 @@ export async function sendPremiumPayment(
     address: INJECTIVE_TESTNET.usdc,
     abi: ERC20_TRANSFER_ABI,
     functionName: "transfer",
-    args: [payTo, parseUnits(String(PREMIUM_USDC), 6)],
+    args: [payTo, parseUnits(String(amountUsdc), 6)],
   });
 
   await publicClient.waitForTransactionReceipt({ hash });

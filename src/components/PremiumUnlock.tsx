@@ -8,7 +8,7 @@ import Link from "next/link";
 import { PaymentInfo, PaymentReceipt } from "@/components/PaymentInfo";
 import { PredictionShareCard } from "@/components/PredictionShareCard";
 import { savePredictionReceipt } from "@/lib/prediction-receipts";
-import { PREMIUM_USDC } from "@/lib/payments";
+import { PRICING } from "@/lib/payments";
 import { sendPremiumPayment } from "@/lib/usdc-payment";
 
 interface PremiumUnlockProps {
@@ -28,6 +28,9 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const tier = type === "analysis" ? PRICING.report : PRICING.insight;
+  const price = tier.usdc;
+
   async function unlock() {
     if (!isConnected || !evmAddress) {
       await connect();
@@ -42,12 +45,12 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
     setLoading(true);
     setError(null);
     try {
-      const hash = await sendPremiumPayment(evmAddress as `0x${string}`, paymentWallet);
+      const hash = await sendPremiumPayment(evmAddress as `0x${string}`, paymentWallet, price);
 
       const verify = await fetch("/api/payment/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txHash: hash, from: evmAddress }),
+        body: JSON.stringify({ txHash: hash, from: evmAddress, amount: price }),
       });
       const v = await verify.json();
       if (!v.verified) throw new Error(v.error ?? "Payment failed");
@@ -81,6 +84,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
         type,
         txHash: hash,
         evmAddress,
+        price: `${price} USDC`,
         percentHome: pred?.percent?.home,
         percentAway: pred?.percent?.away,
         percentDraw: pred?.percent?.draw,
@@ -93,7 +97,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
   }
 
   const title = type === "analysis" ? "Tactical Analysis" : "Head-to-Head History";
-  const hasUsdc = usdcBalance && parseFloat(usdcBalance) >= PREMIUM_USDC;
+  const hasUsdc = usdcBalance && parseFloat(usdcBalance) >= price;
 
   return (
     <div className="rounded-xl border border-goaliq-gold/30 bg-goaliq-gold/5 p-4 space-y-3">
@@ -102,7 +106,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
           {data ? <Unlock className="h-4 w-4 text-goaliq-gold" /> : <Lock className="h-4 w-4 text-goaliq-gold" />}
           <span className="font-medium text-sm">{title}</span>
         </div>
-        <span className="text-xs text-goaliq-gold">{PREMIUM_USDC} USDC</span>
+        <span className="text-xs text-goaliq-gold">{tier.label} · {price} USDC</span>
       </div>
 
       <PaymentInfo />
@@ -154,7 +158,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
           className="w-full rounded-lg bg-goaliq-gold/20 border border-goaliq-gold/40 py-2.5 text-sm font-medium text-goaliq-gold hover:bg-goaliq-gold/30 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />}
-          {!isConnected ? "Connect & Pay" : hasUsdc ? `Pay ${PREMIUM_USDC} USDC & Unlock` : "Need USDC"}
+          {!isConnected ? "Connect & Pay" : hasUsdc ? `Pay ${price} USDC & Unlock` : "Need USDC"}
         </button>
       )}
 

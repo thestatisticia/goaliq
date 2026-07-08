@@ -7,7 +7,7 @@ import { useWallet } from "@/context/WalletContext";
 import { usePaymentConfig } from "@/context/PaymentConfigContext";
 import { cn } from "@/lib/utils";
 import { PaymentInfo } from "@/components/PaymentInfo";
-import { isPremiumQuery, PREMIUM_USDC } from "@/lib/payments";
+import { isPremiumQuery, getTierForQuery } from "@/lib/payments";
 import { sendPremiumPayment } from "@/lib/usdc-payment";
 import { ChatMessageBody } from "@/components/ChatMessageBody";
 import { COPILOT_PROMPT_CHIPS } from "@/lib/copilot-prompts";
@@ -61,6 +61,7 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
 
     const text = input.trim();
     const needsPayment = isPremiumQuery(text) && paymentsEnabled;
+    const tier = getTierForQuery(text);
 
     if (needsPayment) {
       if (!wallet.isConnected || !wallet.evmAddress) {
@@ -68,14 +69,14 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
         return;
       }
       const bal = parseFloat(wallet.usdcBalance ?? "0");
-      if (bal < PREMIUM_USDC) {
+      if (bal < tier.usdc) {
         setMessages((prev) => [
           ...prev,
           { id: Date.now().toString(), role: "user", content: text, timestamp: new Date() },
           {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            content: `You need at least ${PREMIUM_USDC} USDC. Visit **Fund Wallet** to get testnet USDC.`,
+            content: `This is a **${tier.label}** (${tier.usdc} USDC). You need at least ${tier.usdc} USDC — visit **Fund Wallet** to top up testnet USDC.`,
             timestamp: new Date(),
           },
         ]);
@@ -100,12 +101,12 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
     try {
       if (needsPayment && wallet.evmAddress && paymentWallet) {
         setPaying(true);
-        txHash = await sendPremiumPayment(wallet.evmAddress as `0x${string}`, paymentWallet);
+        txHash = await sendPremiumPayment(wallet.evmAddress as `0x${string}`, paymentWallet, tier.usdc);
 
         const verify = await fetch("/api/payment/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ txHash, from: wallet.evmAddress }),
+          body: JSON.stringify({ txHash, from: wallet.evmAddress, amount: tier.usdc }),
         });
         const v = await verify.json();
         if (!v.verified) {
@@ -225,7 +226,7 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
               {paying ? <Coins className="h-4 w-4 text-goaliq-gold animate-pulse" /> : <Bot className="h-4 w-4 text-goaliq-accent animate-pulse" />}
             </div>
             <div className="rounded-lg bg-gray-800/80 px-3 py-2 text-sm text-gray-400">
-              {paying ? `Confirm ${PREMIUM_USDC} USDC payment in Keplr...` : "Thinking..."}
+              {paying ? `Confirm ${getTierForQuery(input).usdc} USDC payment in Keplr...` : "Thinking..."}
             </div>
           </div>
         )}
@@ -241,7 +242,7 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
               className="rounded-full border border-goaliq-border px-3 py-1 text-xs text-gray-400 hover:border-goaliq-accent hover:text-goaliq-accent transition-colors"
             >
               {chip.label}
-              {chip.premium ? " · 0.01 USDC" : ""}
+              {chip.premium ? ` · ${getTierForQuery(chip.query).usdc} USDC` : ""}
             </button>
           ))}
         </div>
@@ -253,7 +254,9 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
           placeholder={
-            isPremiumQuery(input) ? `Premium query — ${PREMIUM_USDC} USDC` : "Ask about matches..."
+            isPremiumQuery(input)
+              ? `${getTierForQuery(input).label} — ${getTierForQuery(input).usdc} USDC`
+              : "Ask about matches..."
           }
           className="flex-1 rounded-lg bg-gray-800/50 border border-goaliq-border px-3 py-2 text-sm focus:outline-none focus:border-goaliq-accent"
         />

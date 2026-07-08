@@ -11,7 +11,8 @@ const client = createPublicClient({
 });
 
 export async function POST(request: Request) {
-  const { txHash, from } = await request.json();
+  const { txHash, from, amount } = await request.json();
+  const expectedUsdc = typeof amount === "number" && amount > 0 ? amount : PREMIUM_USDC;
   const payTo = getPaymentWalletServer();
 
   if (!payTo) {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     const transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-    const expectedAmount = parseUnits(String(PREMIUM_USDC), 6);
+    const expectedAmount = parseUnits(String(expectedUsdc), 6);
 
     const valid = receipt.logs.some((log) => {
       if (log.address.toLowerCase() !== INJECTIVE_TESTNET.usdc.toLowerCase()) return false;
@@ -47,11 +48,11 @@ export async function POST(request: Request) {
     if (!valid) {
       return NextResponse.json({
         verified: false,
-        error: `Payment verification failed. Expected ${PREMIUM_USDC} USDC transfer on Injective testnet.`,
+        error: `Payment verification failed. Expected ${expectedUsdc} USDC transfer on Injective testnet.`,
       });
     }
 
-    return NextResponse.json({ verified: true, txHash, amount: PREMIUM_USDC });
+    return NextResponse.json({ verified: true, txHash, amount: expectedUsdc });
   } catch (e) {
     return NextResponse.json({ verified: false, error: (e as Error).message }, { status: 500 });
   }

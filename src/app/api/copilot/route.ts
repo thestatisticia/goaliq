@@ -46,7 +46,7 @@ import {
 import { answerKnowledgeQuery, isKnowledgeQuery } from "@/lib/copilot-knowledge";
 import { resolveHeadToHead, findTeamMentionedInMessage, resolveTeamsFromMessage } from "@/lib/team-resolver";
 import { buildPremiumMatchReport, buildPremiumReportForTeams, buildFreeUpcomingAnalysis } from "@/lib/match-analysis";
-import { isPremiumQuery } from "@/lib/payments";
+import { isPremiumQuery, getTierForQuery } from "@/lib/payments";
 import type { CopilotContext } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -452,9 +452,11 @@ export async function POST(request: Request) {
       if (teams) {
         const [team1, team2] = teams;
         if (!txHash) {
+          const tier = getTierForQuery(message);
           return NextResponse.json({
             reply: [
-              `${ninjaGreeting()} **${team1.name} vs ${team2.name}** analysis is premium intelligence — **0.01 USDC** on Injective testnet.`,
+              `${ninjaGreeting()} **${team1.name} vs ${team2.name}** is a **${tier.label}** — **${tier.usdc} USDC** on Injective testnet.`,
+              `_${tier.blurb}._`,
               "",
               "Connect Keplr and ask again — I'll prompt you to pay and unlock win chances, tournament form, and head-to-head.",
             ].join("\n"),
@@ -474,8 +476,9 @@ export async function POST(request: Request) {
       }
 
       if (!txHash) {
+        const tier = getTierForQuery(message);
         return NextResponse.json({
-          reply: `${ninjaGreeting()} Match analysis costs **0.01 USDC**. Name both teams clearly, e.g. **"analyze France vs Morocco"**, then confirm payment in Keplr.`,
+          reply: `${ninjaGreeting()} Match analysis is a **${tier.label}** (**${tier.usdc} USDC**). Name both teams clearly, e.g. **"analyze France vs Morocco"**, then confirm payment in Keplr.`,
           model: "payment-required",
           provider: "payment",
           intent: "payment",
@@ -492,8 +495,9 @@ export async function POST(request: Request) {
   }
 
   if (isPremium && !txHash) {
+    const tier = getTierForQuery(message);
     return NextResponse.json({
-      reply: `${ninjaGreeting()} That's a **premium query** — **0.01 USDC** on Injective testnet. Connect Keplr and try again to pay & unlock.`,
+      reply: `${ninjaGreeting()} That's a **${tier.label}** — **${tier.usdc} USDC** on Injective testnet.\n_${tier.blurb}._\n\nConnect Keplr and try again to pay & unlock.`,
       model: "payment-required",
       provider: "payment",
       intent: "payment",
@@ -589,7 +593,7 @@ export async function POST(request: Request) {
   // Never let the LLM improvise single-match analysis — that's premium API data
   if (isSingleMatchAnalysisQuery(message)) {
     return NextResponse.json({
-      reply: `${ninjaGreeting()} I couldn't resolve both teams in that message, ninja. Try **"analyze France vs Morocco"** — premium analysis is **0.01 USDC**.`,
+      reply: `${ninjaGreeting()} I couldn't resolve both teams in that message, ninja. Try **"analyze France vs Morocco"** — premium analysis starts at **${getTierForQuery(message).usdc} USDC**.`,
       model: "payment-required",
       provider: "payment",
       intent: "payment",

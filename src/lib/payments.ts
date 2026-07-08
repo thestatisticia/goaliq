@@ -4,6 +4,59 @@ import { isSingleMatchAnalysisQuery, isUpcomingAnalysisQuery } from "./copilot";
 export const PREMIUM_USDC = 0.01;
 export const PREMIUM_USDC_RAW = X402_PREMIUM_PRICE; // 10000 = 0.01 USDC (6 decimals)
 
+/** Premium pricing tiers — deeper intelligence costs more. */
+export type PricingTierId = "insight" | "report" | "forecast";
+
+export interface PricingTier {
+  id: PricingTierId;
+  label: string;
+  usdc: number;
+  blurb: string;
+}
+
+export const PRICING: Record<PricingTierId, PricingTier> = {
+  insight: {
+    id: "insight",
+    label: "Quick Insight",
+    usdc: 0.02,
+    blurb: "Win chances, single-match preview, head-to-head snapshot",
+  },
+  report: {
+    id: "report",
+    label: "Deep Report",
+    usdc: 0.05,
+    blurb: "Full tactical analysis, strengths/weaknesses, H2H history",
+  },
+  forecast: {
+    id: "forecast",
+    label: "Tournament Forecast",
+    usdc: 0.1,
+    blurb: "Who-wins-it-all projection and multi-match knockout outlook",
+  },
+};
+
+/** Lowest premium price — used for balance sanity checks. */
+export const MIN_PREMIUM_USDC = Math.min(...Object.values(PRICING).map((t) => t.usdc));
+
+/** Pick the pricing tier a premium query belongs to. */
+export function getTierForQuery(message: string): PricingTier {
+  if (
+    /who\s+will\s+win\s+the\s+(world\s+cup|tournament|title)|win\s+the\s+world\s+cup|tournament\s+(forecast|winner|prediction)|predict\s+the\s+(bracket|winner|champion|whole)|lift\s+the\s+trophy|go\s+all\s+the\s+way|reach\s+the\s+final/i.test(
+      message
+    )
+  ) {
+    return PRICING.forecast;
+  }
+  if (
+    /head[\s-]?to[\s-]?head|h2h|tactical|deep\s+analysis|full\s+report|weakness|strength|how\s+could\s+this\s+match\s+unfold|what\s+should\s+each\s+team/i.test(
+      message
+    )
+  ) {
+    return PRICING.report;
+  }
+  return PRICING.insight;
+}
+
 /** Wallet that receives all premium USDC payments (set in .env.local) */
 export function getPaymentWallet(): `0x${string}` | null {
   const addr = process.env.NEXT_PUBLIC_PAYMENT_WALLET;
