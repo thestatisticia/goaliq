@@ -25,6 +25,8 @@ import {
   formatGreetingReply,
   isTeamOutcomeQuery,
   formatTeamOutcomeReply,
+  isProgressionQuery,
+  formatProgressionReply,
   ninjaGreeting,
 } from "@/lib/copilot";
 import { resolveHeadToHead, findTeamMentionedInMessage, resolveTeamsFromMessage } from "@/lib/team-resolver";
@@ -99,6 +101,44 @@ export async function POST(request: Request) {
         model: "error",
         provider: "football-data.org",
         intent: "team-outcome",
+      });
+    }
+  }
+
+  // Progression ("did Norway proceed to the next round?") — must run before
+  // isNextMatchesQuery, which greedily matches "next" + "round".
+  if (isProgressionQuery(message)) {
+    try {
+      const team = await findTeamMentionedInMessage(message);
+      if (team) {
+        const [upcoming, lastFinished] = await Promise.all([
+          getUpcomingWorldCupMatches(30),
+          getLatestFinishedMatchForTeam(team.id),
+        ]);
+        const nextMatch =
+          upcoming
+            .filter((m) => m.teams.home.id === team.id || m.teams.away.id === team.id)
+            .sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime())[0] ??
+          null;
+        return NextResponse.json({
+          reply: formatProgressionReply(team, nextMatch, lastFinished),
+          model: "football-data",
+          provider: "football-data.org",
+          intent: "progression",
+        });
+      }
+      return NextResponse.json({
+        reply: `${ninjaGreeting()} Which team, ninja? Ask like "did Norway proceed to the next round?" and I'll check the bracket.`,
+        model: "football-data",
+        provider: "football-data.org",
+        intent: "progression",
+      });
+    } catch (e) {
+      return NextResponse.json({
+        reply: `${ninjaGreeting()} Hit a snag checking the bracket: ${(e as Error).message}`,
+        model: "error",
+        provider: "football-data.org",
+        intent: "progression",
       });
     }
   }

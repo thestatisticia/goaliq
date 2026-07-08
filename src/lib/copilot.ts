@@ -58,6 +58,91 @@ export function isSwapOrTradeQuery(message: string): boolean {
   return /\b(swap|trade|convert|exchange)\b/i.test(message) && /\b(usdc|inj|injective|token)\b/i.test(message);
 }
 
+/**
+ * "Did Norway proceed to the next round?" — progression questions.
+ * Must be checked BEFORE isNextMatchesQuery, since it also contains "next round".
+ */
+export function isProgressionQuery(message: string): boolean {
+  const asksProgress =
+    /\b(proceed(?:ed)?|progress(?:ed)?|advanc(?:e|ed|ing)|qualif(?:y|ied|ies)|through|reach(?:ed|es)?|make\s+it|made\s+it|still\s+in|go(?:ing)?\s+through|survive[d]?|knocked\s+out|eliminated|crash(?:ed)?\s+out)\b/i.test(
+      message
+    );
+  const roundHint =
+    /\b(next\s+round|next\s+stage|knockout|quarter[\s-]?finals?|semi[\s-]?finals?|round\s+of\s+\d+|last\s+\d+)\b/i.test(
+      message
+    );
+  const isQuestion = /\b(did|has|have|is|are|will|do|does)\b/i.test(message);
+  return isQuestion && (asksProgress || roundHint);
+}
+
+export function formatProgressionReply(
+  team: { id: number; name: string },
+  nextMatch: Match | null,
+  lastFinished: Match | null
+): string {
+  const roundOf = (m: Match) => m.league.round ?? "the knockouts";
+  const oppName = (m: Match) => (m.teams.home.id === team.id ? m.teams.away.name : m.teams.home.name);
+
+  const teamGoals = (m: Match) => (m.teams.home.id === team.id ? m.goals?.home ?? 0 : m.goals?.away ?? 0);
+  const oppGoals = (m: Match) => (m.teams.home.id === team.id ? m.goals?.away ?? 0 : m.goals?.home ?? 0);
+
+  if (nextMatch) {
+    const opp = oppName(nextMatch);
+    const dt = new Date(nextMatch.fixture.date);
+    const when =
+      dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) +
+      " " +
+      dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) +
+      " UTC";
+
+    const lines = [
+      `${ninjaGreeting()} Yes — **${team.name}** are through!`,
+      "",
+      `They're in the **${roundOf(nextMatch)}**${opp && opp !== "TBD" ? ` against **${opp}**` : ""} — ${when}.`,
+    ];
+
+    if (lastFinished && teamGoals(lastFinished) >= oppGoals(lastFinished)) {
+      lines.push(
+        "",
+        `They got here by seeing off **${oppName(lastFinished)}** **${teamGoals(lastFinished)}–${oppGoals(lastFinished)}** in the **${roundOf(lastFinished)}**.`
+      );
+    }
+
+    lines.push("", "Want win chances for their next match? Just ask, ninja (premium, 0.01 USDC).");
+    return lines.join("\n");
+  }
+
+  if (lastFinished) {
+    const tg = teamGoals(lastFinished);
+    const og = oppGoals(lastFinished);
+    const opp = oppName(lastFinished);
+
+    if (tg > og) {
+      return [
+        `${ninjaGreeting()} **${team.name}** won their last match **${tg}–${og}** vs **${opp}** in the **${roundOf(lastFinished)}** — so they're through, ninja.`,
+        "",
+        "Their next opponent isn't locked in yet (still TBD). Peek at the dashboard **Knockout** tab.",
+      ].join("\n");
+    }
+
+    if (tg < og) {
+      return [
+        `${ninjaGreeting()} Tough one — **${team.name}** are **out**. **${opp}** beat them **${og}–${tg}** in the **${roundOf(lastFinished)}**.`,
+        "",
+        "Want to see who's still in the hunt? Just ask, ninja.",
+      ].join("\n");
+    }
+
+    return [
+      `${ninjaGreeting()} **${team.name}** drew their last match **${tg}–${og}** vs **${opp}** in the **${roundOf(lastFinished)}** — it may have gone to penalties.`,
+      "",
+      "Check the dashboard **Knockout** tab to see who advanced, ninja.",
+    ].join("\n");
+  }
+
+  return `${ninjaGreeting()} I couldn't pin down a recent result for **${team.name}**, ninja — check the dashboard **Knockout** tab.`;
+}
+
 export { isGreetingMessage, formatGreetingReply, isTeamOutcomeQuery, ninjaGreeting } from "./copilot-personality";
 
 export function formatTeamOutcomeReply(team: { id: number; name: string }, match: Match): string {
