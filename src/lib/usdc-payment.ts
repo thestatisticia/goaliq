@@ -2,7 +2,7 @@
 
 import { createWalletClient, createPublicClient, custom, http, parseUnits, type Hash } from "viem";
 import { INJECTIVE_TESTNET } from "./constants";
-import { getPaymentWallet, PREMIUM_USDC } from "./payments";
+import { PREMIUM_USDC } from "./payments";
 
 const ERC20_TRANSFER_ABI = [
   {
@@ -28,8 +28,10 @@ function getEthereumProvider(): unknown {
 }
 
 /** Send 0.01 testnet USDC to the configured payment wallet via Keplr (Injective EVM) */
-export async function sendPremiumPayment(fromAddress: `0x${string}`): Promise<Hash> {
-  const payTo = getPaymentWallet();
+export async function sendPremiumPayment(
+  fromAddress: `0x${string}`,
+  payTo: `0x${string}`
+): Promise<Hash> {
   if (!payTo) {
     throw new Error("Premium payments are not available right now.");
   }

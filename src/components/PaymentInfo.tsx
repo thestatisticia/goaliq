@@ -1,15 +1,25 @@
 "use client";
 
-import { PREMIUM_USDC, isPaymentsEnabled, getPaymentExplorerUrl } from "@/lib/payments";
+import { PREMIUM_USDC, getPaymentExplorerUrl } from "@/lib/payments";
+import { usePaymentConfig } from "@/context/PaymentConfigContext";
 import { ExternalLink } from "lucide-react";
 
 export function PaymentInfo() {
-  const enabled = isPaymentsEnabled();
+  const { paymentsEnabled, loading } = usePaymentConfig();
 
-  if (!enabled) {
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-goaliq-border bg-goaliq-card/50 px-3 py-2 text-[11px] text-gray-500">
+        Loading payment config…
+      </div>
+    );
+  }
+
+  if (!paymentsEnabled) {
     return (
       <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-[11px] text-yellow-300">
-        Premium payments are temporarily unavailable.
+        Premium payments are temporarily unavailable. Add{" "}
+        <span className="font-mono">NEXT_PUBLIC_PAYMENT_WALLET</span> (0x address) in Vercel and redeploy.
       </div>
     );
   }

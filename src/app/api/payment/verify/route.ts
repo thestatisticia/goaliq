@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createPublicClient, http, parseUnits } from "viem";
 import { INJECTIVE_TESTNET } from "@/lib/constants";
-import { getPaymentWallet, PREMIUM_USDC } from "@/lib/payments";
+import { getPaymentWalletServer } from "@/lib/payments-server";
+import { PREMIUM_USDC } from "@/lib/payments";
+
+export const dynamic = "force-dynamic";
 
 const client = createPublicClient({
   transport: http(INJECTIVE_TESTNET.rpcUrl),
@@ -9,7 +12,7 @@ const client = createPublicClient({
 
 export async function POST(request: Request) {
   const { txHash, from } = await request.json();
-  const payTo = getPaymentWallet();
+  const payTo = getPaymentWalletServer();
 
   if (!payTo) {
     return NextResponse.json({ verified: false, error: "Payment wallet not configured" }, { status: 503 });

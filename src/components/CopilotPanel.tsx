@@ -4,9 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Sparkles, Coins } from "lucide-react";
 import type { ChatMessage, CopilotContext } from "@/lib/types";
 import { useWallet } from "@/context/WalletContext";
+import { usePaymentConfig } from "@/context/PaymentConfigContext";
 import { cn } from "@/lib/utils";
 import { PaymentInfo } from "@/components/PaymentInfo";
-import { isPremiumQuery, isPaymentsEnabled, PREMIUM_USDC } from "@/lib/payments";
+import { isPremiumQuery, PREMIUM_USDC } from "@/lib/payments";
 import { sendPremiumPayment } from "@/lib/usdc-payment";
 import { ChatMessageBody } from "@/components/ChatMessageBody";
 
@@ -22,6 +23,7 @@ interface ModelOption {
 
 export function CopilotPanel({ context = {} }: CopilotPanelProps) {
   const wallet = useWallet();
+  const { paymentsEnabled, paymentWallet } = usePaymentConfig();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -57,7 +59,7 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
     if (!input.trim() || loading || paying) return;
 
     const text = input.trim();
-    const needsPayment = isPremiumQuery(text) && isPaymentsEnabled();
+    const needsPayment = isPremiumQuery(text) && paymentsEnabled;
 
     if (needsPayment) {
       if (!wallet.isConnected || !wallet.evmAddress) {
@@ -95,9 +97,9 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
     let txHash: string | undefined;
 
     try {
-      if (needsPayment && wallet.evmAddress) {
+      if (needsPayment && wallet.evmAddress && paymentWallet) {
         setPaying(true);
-        txHash = await sendPremiumPayment(wallet.evmAddress as `0x${string}`);
+        txHash = await sendPremiumPayment(wallet.evmAddress as `0x${string}`, paymentWallet);
 
         const verify = await fetch("/api/payment/verify", {
           method: "POST",

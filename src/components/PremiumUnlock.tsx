@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Lock, Unlock, Loader2, AlertCircle, Coins } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
+import { usePaymentConfig } from "@/context/PaymentConfigContext";
 import Link from "next/link";
 import { PaymentInfo } from "@/components/PaymentInfo";
-import { PREMIUM_USDC, isPaymentsEnabled } from "@/lib/payments";
+import { PREMIUM_USDC } from "@/lib/payments";
 import { sendPremiumPayment } from "@/lib/usdc-payment";
 
 interface PremiumUnlockProps {
@@ -17,6 +18,7 @@ interface PremiumUnlockProps {
 
 export function PremiumUnlock({ matchId, team1Id, team2Id, type }: PremiumUnlockProps) {
   const { isConnected, evmAddress, usdcBalance, connect, connecting, refreshBalance } = useWallet();
+  const { paymentsEnabled, paymentWallet } = usePaymentConfig();
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -28,7 +30,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, type }: PremiumUnlock
       return;
     }
 
-    if (!isPaymentsEnabled()) {
+    if (!paymentsEnabled || !paymentWallet) {
       setError("Premium payments are not available right now.");
       return;
     }
@@ -36,7 +38,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, type }: PremiumUnlock
     setLoading(true);
     setError(null);
     try {
-      const hash = await sendPremiumPayment(evmAddress as `0x${string}`);
+      const hash = await sendPremiumPayment(evmAddress as `0x${string}`, paymentWallet);
 
       const verify = await fetch("/api/payment/verify", {
         method: "POST",
