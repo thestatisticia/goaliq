@@ -18,5 +18,6 @@ export const COPILOT_PROMPT_CHIPS: CopilotPromptChip[] = [
   { label: "📈 Group standings", query: "Show the group standings" },
   { label: "🔥 Team form", query: "How has France performed recently?" },
   { label: "🤖 Predict a match", query: "Analyze France vs Morocco", premium: true },
+  { label: "🌍 Who wins it all?", query: "Who is most likely to win the World Cup?", premium: true },
   { label: "📊 Compare teams", query: "Compare France and Spain" },
 ];

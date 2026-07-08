@@ -9,7 +9,8 @@ import {
 import { ninjaGreeting } from "./copilot-personality";
 import { getFallbackPrediction, findFallbackFixture } from "./prediction-fallback";
 import { resolveTeamsFromMessage, searchTeam } from "./team-resolver";
-import type { Match } from "./types";
+import { getKnockoutRoundOrder, getKnockoutWinner, isTbdTeamName } from "./knockout-bracket";
+import type { Match, Team } from "./types";
 
 const FINISHED = new Set(["FT", "AET", "PEN"]);
 
@@ -267,6 +268,142 @@ export async function buildFreeUpcomingAnalysis(limit = 4): Promise<string> {
   );
 
   return sections.join("\n");
+}
+
+interface TeamStrength {
+  id: number;
+  name: string;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  gf: number;
+  ga: number;
+  deepestRound: number;
+  score: number;
+}
+
+/**
+ * Premium tournament-winner forecast — data-grounded (never invents scores).
+ * Ranks teams still in the tournament by tournament form + progress.
+ */
+export async function buildTournamentForecast(): Promise<string> {
+  const matches = await loadWorldCupTournamentMatches();
+  const knockout = matches.filter((m) => getKnockoutRoundOrder(m.league.round ?? "") > 0);
+
+  // Determine who's been eliminated (lost a finished knockout tie)
+  const eliminated = new Set<number>();
+  for (const m of knockout) {
+    if (!FINISHED.has(m.fixture.status.short)) continue;
+    const winner = getKnockoutWinner(m);
+    if (!winner) continue;
+    const loser = m.teams.home.id === winner.id ? m.teams.away : m.teams.home;
+    if (loser.id) eliminated.add(loser.id);
+  }
+
+  // Candidate teams: appeared in knockout, not eliminated, not TBD
+  const candidates = new Map<number, Team>();
+  for (const m of knockout) {
+    for (const t of [m.teams.home, m.teams.away]) {
+      if (t.id && !isTbdTeamName(t.name) && !eliminated.has(t.id)) candidates.set(t.id, t);
+    }
+  }
+
+  // If knockouts haven't produced a bracket yet, fall back to all teams with finished games
+  const finished = matches.filter((m) => FINISHED.has(m.fixture.status.short));
+  if (candidates.size === 0) {
+    for (const m of finished) {
+      for (const t of [m.teams.home, m.teams.away]) {
+        if (t.id && !isTbdTeamName(t.name)) candidates.set(t.id, t);
+      }
+    }
+  }
+
+  if (candidates.size === 0) {
+    return `${ninjaGreeting()} The bracket isn't far enough along to forecast a winner yet, ninja — check back once knockout results are in.`;
+  }
+
+  // Build strength from every finished match
+  const stats = new Map<number, TeamStrength>();
+  const ensure = (t: Team): TeamStrength => {
+    let s = stats.get(t.id);
+    if (!s) {
+      s = { id: t.id, name: t.name, played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, deepestRound: 0, score: 0 };
+      stats.set(t.id, s);
+    }
+    return s;
+  };
+
+  for (const m of finished) {
+    if (!candidates.has(m.teams.home.id) && !candidates.has(m.teams.away.id)) continue;
+    const hg = m.goals.home ?? 0;
+    const ag = m.goals.away ?? 0;
+    const round = getKnockoutRoundOrder(m.league.round ?? "");
+
+    for (const [team, gf, ga] of [
+      [m.teams.home, hg, ag],
+      [m.teams.away, ag, hg],
+    ] as [Team, number, number][]) {
+      if (!candidates.has(team.id)) continue;
+      const s = ensure(team);
+      s.played++;
+      s.gf += gf;
+      s.ga += ga;
+      if (gf > ga) s.wins++;
+      else if (gf < ga) s.losses++;
+      else s.draws++;
+      if (round > s.deepestRound) s.deepestRound = round;
+    }
+  }
+
+  const ranked: TeamStrength[] = [];
+  for (const id of Array.from(candidates.keys())) {
+    const t = candidates.get(id)!;
+    const s = stats.get(id) ?? {
+      id,
+      name: t.name,
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      gf: 0,
+      ga: 0,
+      deepestRound: 0,
+      score: 0,
+    };
+    const gd = s.gf - s.ga;
+    // Weighted score: results + goal diff + how deep they've gone
+    s.score = s.wins * 3 + s.draws + gd * 0.6 + s.gf * 0.2 + s.deepestRound * 2 + 1;
+    ranked.push(s);
+  }
+
+  ranked.sort((a, b) => b.score - a.score);
+
+  const totalScore = ranked.reduce((sum, r) => sum + Math.max(r.score, 0.1), 0);
+  const withProb = ranked.map((r) => ({
+    ...r,
+    prob: Math.round((Math.max(r.score, 0.1) / totalScore) * 100),
+  }));
+
+  const top = withProb.slice(0, 8);
+  const favourite = top[0];
+
+  const lines = [
+    `${ninjaGreeting()} **World Cup winner forecast** — ${withProb.length} teams still in it.`,
+    "",
+    `My model favours **${favourite.name}** (~${favourite.prob}% to lift the trophy), based on tournament results, goal difference, and how deep each side has advanced.`,
+    "",
+    "| Rank | Team | Win-it-all | WC record | GD |",
+    "|---|---|---|---|---|",
+    ...top.map(
+      (t, i) =>
+        `| ${i + 1} | **${t.name}** | ${t.prob}% | ${t.wins}W-${t.draws}D-${t.losses}L | ${t.gf - t.ga > 0 ? "+" : ""}${t.gf - t.ga} |`
+    ),
+    "",
+    "_Data-grounded projection from live World Cup results — not a guarantee. Odds shift with every match._",
+  ];
+
+  return lines.join("\n");
 }
 
 export async function buildPremiumMatchReport(

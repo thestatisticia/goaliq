@@ -1,5 +1,5 @@
 import { INJECTIVE_TESTNET, X402_PREMIUM_PRICE } from "./constants";
-import { isSingleMatchAnalysisQuery, isUpcomingAnalysisQuery } from "./copilot";
+import { isSingleMatchAnalysisQuery, isUpcomingAnalysisQuery, isTournamentForecastQuery } from "./copilot";
 
 export const PREMIUM_USDC = 0.01;
 export const PREMIUM_USDC_RAW = X402_PREMIUM_PRICE; // 10000 = 0.01 USDC (6 decimals)
@@ -76,6 +76,9 @@ export function getPaymentExplorerUrl(txHash: string): string {
 export function isPremiumQuery(message: string): boolean {
   // Free: bulk previews for upcoming fixtures
   if (isUpcomingAnalysisQuery(message)) return false;
+
+  // Premium: tournament-winner forecast
+  if (isTournamentForecastQuery(message)) return true;
 
   // Premium: analyze / preview one specific matchup
   if (isSingleMatchAnalysisQuery(message)) return true;

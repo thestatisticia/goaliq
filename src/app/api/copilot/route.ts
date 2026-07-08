@@ -19,6 +19,7 @@ import {
   isNextMatchesQuery,
   isUpcomingAnalysisQuery,
   isSingleMatchAnalysisQuery,
+  isTournamentForecastQuery,
   formatTodayScheduleReply,
   formatUpcomingScheduleReply,
   isSwapOrTradeQuery,
@@ -45,7 +46,7 @@ import {
 } from "@/lib/copilot";
 import { answerKnowledgeQuery, isKnowledgeQuery } from "@/lib/copilot-knowledge";
 import { resolveHeadToHead, findTeamMentionedInMessage, resolveTeamsFromMessage } from "@/lib/team-resolver";
-import { buildPremiumMatchReport, buildPremiumReportForTeams, buildFreeUpcomingAnalysis } from "@/lib/match-analysis";
+import { buildPremiumMatchReport, buildPremiumReportForTeams, buildFreeUpcomingAnalysis, buildTournamentForecast } from "@/lib/match-analysis";
 import { isPremiumQuery, getTierForQuery } from "@/lib/payments";
 import type { CopilotContext } from "@/lib/types";
 
@@ -87,6 +88,40 @@ export async function POST(request: Request) {
       provider: "goaliq",
       intent: "greeting",
     });
+  }
+
+  // Tournament-winner forecast ("who will win the world cup?") — premium Forecast tier
+  if (isTournamentForecastQuery(message)) {
+    const tier = getTierForQuery(message);
+    if (!txHash) {
+      return NextResponse.json({
+        reply: [
+          `${ninjaGreeting()} Calling the champion is a **${tier.label}** — **${tier.usdc} USDC** on Injective testnet.`,
+          `_${tier.blurb}._`,
+          "",
+          "Connect Keplr and ask again — I'll run the win-it-all model across every team still standing.",
+        ].join("\n"),
+        model: "payment-required",
+        provider: "payment",
+        intent: "payment",
+      });
+    }
+    try {
+      const forecast = await buildTournamentForecast();
+      return NextResponse.json({
+        reply: forecast,
+        model: "premium-forecast",
+        provider: "goaliq",
+        intent: "forecast",
+      });
+    } catch (e) {
+      return NextResponse.json({
+        reply: `Could not build the tournament forecast: ${(e as Error).message}`,
+        model: "error",
+        provider: "goaliq",
+        intent: "forecast",
+      });
+    }
   }
 
   // Casual team outcome ("so egypt lost", "did argentina win")

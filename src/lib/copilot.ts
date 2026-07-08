@@ -39,8 +39,24 @@ export function isUpcomingAnalysisQuery(message: string): boolean {
   return asksUpcoming && asksMatch;
 }
 
+/** "Who will win the World Cup?" / tournament-winner forecast (premium). */
+export function isTournamentForecastQuery(message: string): boolean {
+  // Not about a past champion
+  if (/\b(who\s+won|last\s+world\s+cup|previous\s+world\s+cup|2022|2018|2014)\b/i.test(message)) return false;
+  const futureWin =
+    /\b(win|winning|wins|lift|lifting|clinch|claim)\b[\s\w']*\b(world\s+cup|tournament|title|trophy|it\s+all|the\s+cup)\b/i.test(
+      message
+    );
+  const favouritePhrase =
+    /\b(most\s+likely\s+to\s+win|favou?rite[s]?\s+to\s+win|who\s+wins?\s+it\s+all|go(?:ing)?\s+all\s+the\s+way|tournament\s+(favou?rite|winner|forecast|prediction)|world\s+cup\s+(favou?rite|winner|forecast|prediction)|who\s+will\s+win\s+the\s+(world\s+cup|tournament|title))\b/i.test(
+      message
+    );
+  return futureWin || favouritePhrase;
+}
+
 /** Single-match deep analysis (premium) — not bulk "next matches" previews. */
 export function isSingleMatchAnalysisQuery(message: string): boolean {
+  if (isTournamentForecastQuery(message)) return false;
   return wantsMatchAnalysis(message) && !isUpcomingAnalysisQuery(message);
 }
 

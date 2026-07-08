@@ -28,5 +28,9 @@ export function isTeamOutcomeQuery(message: string): boolean {
     /\b(so|did|has|have|is|are|was|were)\b/i.test(message) || message.trim().split(/\s+/).length <= 8;
   // Don't steal progression queries ("proceed to next round")
   if (/\b(proceed|next\s+round|next\s+stage)\b/i.test(message)) return false;
+  // Don't steal tournament-winner forecasts ("who will win the world cup")
+  if (/\b(world\s+cup|tournament|title|trophy|it\s+all)\b/i.test(message) && /\b(win|winning|wins|favou?rite|likely|lift)\b/i.test(message)) {
+    return false;
+  }
   return hasOutcome && hasTeamHint;
 }
