@@ -60,3 +60,10 @@ export function getFallbackMatches(): Match[] {
     m(1576805, "2026-07-07T20:00:00+00:00", "NS", "Not Started", "Round of 16", t.Switzerland, t.Colombia, null, null),
   ];
 }
+
+const FALLBACK_IDS = new Set([1576801, 1576802, 1576803, 1576804, 1576805]);
+
+/** True when showing the hardcoded 5-match offline seed — not real API data. */
+export function isFallbackDataset(matches: Match[]): boolean {
+  return matches.length > 0 && matches.length <= 5 && matches.every((m) => FALLBACK_IDS.has(m.fixture.id));
+}

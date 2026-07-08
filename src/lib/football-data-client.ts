@@ -111,7 +111,7 @@ export async function footballDataRequest<T>(path: string, cacheKey: string, ttl
 
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "X-Auth-Token": key },
-    cache: "no-store",
+    next: { revalidate: Math.max(1, Math.floor(ttlMs / 1000)) },
   });
 
   if (res.status === 429) throw new Error("FD_RATE_LIMIT");

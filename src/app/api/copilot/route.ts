@@ -30,6 +30,8 @@ import { buildPremiumMatchReport } from "@/lib/match-analysis";
 import { isPremiumQuery } from "@/lib/payments";
 import type { CopilotContext } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   return NextResponse.json({
     models: getAvailableModels(),

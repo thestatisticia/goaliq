@@ -60,7 +60,7 @@ export async function footballApiRequest<T>(endpoint: string): Promise<T> {
     try {
       const res = await fetch(`${BASE_URL}${endpoint}`, {
         headers: { "x-apisports-key": key },
-        cache: "no-store",
+        next: { revalidate: 60 },
       });
 
       if (!res.ok) {

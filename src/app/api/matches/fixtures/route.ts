@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getFixtures } from "@/lib/football-api";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const matches = await getFixtures();

@@ -4,7 +4,7 @@ import { dateWindowForTimeZone, formatDateInTimeZone, resolveTimeZone } from "./
 import { serverEnv, serverEnvStatus } from "./server-env";
 import { getCached, getCachedStale, setCached, CACHE_TTL } from "./cache";
 import type { Match, StandingGroup, MatchEvent, MatchDetail } from "./types";
-import { getFallbackMatches, WC_FALLBACK_TEAMS, type WorldCupTeam } from "./wc-fallback";
+import { getFallbackMatches, WC_FALLBACK_TEAMS, isFallbackDataset, type WorldCupTeam } from "./wc-fallback";
 import { footballApiRequest, getApiFootballKeyCount } from "./api-football-client";
 import { fetchApisportsMatchExtras } from "./apisports-extras";
 import {
@@ -34,6 +34,14 @@ function allowDevFallback(): boolean {
 
 function isAnyFootballApiConfigured(): boolean {
   return isFootballDataConfigured() || getApiFootballKeyCount() > 0;
+}
+
+/** Ignore tiny or demo caches in production — they cause false "demo data" states. */
+function tournamentCacheUsable(data: Match[] | null | undefined): data is Match[] {
+  if (!data?.length) return false;
+  if (isFallbackDataset(data)) return false;
+  if (process.env.NODE_ENV === "production" && data.length < 50) return false;
+  return true;
 }
 
 const LIVE_STATUSES = new Set(["1H", "2H", "HT", "ET", "BT", "P", "LIVE"]);
@@ -290,23 +298,16 @@ async function buildFreshTournament(timeZone?: string): Promise<Match[]> {
 }
 
 async function loadApisportsTournament(): Promise<Match[]> {
-  const matches: Match[] = [];
-  const start = new Date(TOURNAMENT_START);
-  const end = new Date(TOURNAMENT_END);
-  for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-    const dateStr = formatDate(d);
-    try {
-      const day = await apisportsFetch<Match[]>(
-        `/fixtures?date=${dateStr}`,
-        `fixtures-date-${dateStr}`,
-        CACHE_TTL.fixtures
-      );
-      matches.push(...day.filter(isWorldCup));
-    } catch {
-      /* skip */
-    }
+  try {
+    const matches = await apisportsFetch<Match[]>(
+      `/fixtures?league=${WC_LEAGUE_ID}&season=${WC_SEASON}`,
+      `apisports-wc-${WC_SEASON}`,
+      CACHE_TTL.tournament
+    );
+    return matches.filter(isWorldCup);
+  } catch {
+    return [];
   }
-  return Array.from(new Map(matches.map((m) => [m.fixture.id, m])).values());
 }
 
 // ─── Primary loaders (football-data.org first) ────────────────────────────
@@ -318,7 +319,7 @@ let lastKnownTournament: Match[] | null = null;
 export async function loadWorldCupTournamentMatches(): Promise<Match[]> {
   const cacheKey = `wc-tournament-${TOURNAMENT_START}-${TOURNAMENT_END}`;
   const cached = getCached<Match[]>(cacheKey);
-  if (cached && cached.length >= 20) return cached;
+  if (tournamentCacheUsable(cached)) return cached;
 
   if (!tournamentPromise) {
     tournamentPromise = (async () => {
@@ -348,7 +349,7 @@ export async function loadWorldCupTournamentMatches(): Promise<Match[]> {
           const msg = (e as Error).message;
           console.warn("[football-data] tournament load failed:", msg);
           const stale = getCachedStale<Match[]>(cacheKey);
-          if (stale?.length) return stale;
+          if (tournamentCacheUsable(stale)) return stale;
           if (lastKnownTournament?.length) return lastKnownTournament;
         }
       }
@@ -557,9 +558,12 @@ export async function getDashboardData(opts?: { timeZone?: string }) {
     source = "misconfigured";
     warning =
       "Football data API is not configured. In Vercel → Settings → Environment Variables, add FOOTBALL_DATA_KEY (exact name, no quotes), enable Production, then Redeploy.";
-  } else if (tournament.length > 0 && tournament.length < 20) {
+  } else if (isFallbackDataset(tournament)) {
     source = "fallback";
-    warning = "Showing limited demo data — live football API is unavailable.";
+    warning =
+      "Showing offline demo matches — football-data.org did not respond on the server. Confirm FOOTBALL_DATA_KEY in Vercel and redeploy.";
+  } else if (tournament.length > 0 && tournament.length < 50) {
+    warning = `Only ${tournament.length} of 104 World Cup matches loaded — API may be rate-limited. Try again in a minute.`;
   } else if (tournament.length === 0) {
     warning = "Could not load World Cup schedule. Check API keys or rate limits.";
   }
