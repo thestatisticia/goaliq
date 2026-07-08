@@ -39,6 +39,11 @@ export function isUpcomingAnalysisQuery(message: string): boolean {
   return asksUpcoming && asksMatch;
 }
 
+/** Single-match deep analysis (premium) — not bulk "next matches" previews. */
+export function isSingleMatchAnalysisQuery(message: string): boolean {
+  return wantsMatchAnalysis(message) && !isUpcomingAnalysisQuery(message);
+}
+
 /** "When is the next match?" / upcoming schedule — API only, not LLM. */
 export function isNextMatchesQuery(message: string): boolean {
   if (isTodayScheduleQuery(message)) return false;

@@ -1,4 +1,5 @@
 import { INJECTIVE_TESTNET, X402_PREMIUM_PRICE } from "./constants";
+import { isSingleMatchAnalysisQuery, isUpcomingAnalysisQuery } from "./copilot";
 
 export const PREMIUM_USDC = 0.01;
 export const PREMIUM_USDC_RAW = X402_PREMIUM_PRICE; // 10000 = 0.01 USDC (6 decimals)
@@ -20,14 +21,11 @@ export function getPaymentExplorerUrl(txHash: string): string {
 
 /** Queries that cost USDC */
 export function isPremiumQuery(message: string): boolean {
-  // Free: previews for multiple upcoming matches (form from live data)
-  if (
-    /\b(analys[ei]s|preview|breakdown|outlook)\b/i.test(message) &&
-    /\b(next|upcoming)\b/i.test(message) &&
-    /\bmatch/i.test(message)
-  ) {
-    return false;
-  }
+  // Free: bulk previews for upcoming fixtures
+  if (isUpcomingAnalysisQuery(message)) return false;
+
+  // Premium: analyze / preview one specific matchup
+  if (isSingleMatchAnalysisQuery(message)) return true;
 
   return /head[\s-]?to[\s-]?head|h2h|tactical|deep analysis|premium insight|unlock analysis|chances?\s+of|win\s+(chance|chances|probability|odds)|who\s+will\s+win|predict|match\s+preview|preview\s+of|against\s+\w|versus\s+\w|'s\s+(win|match|chance)/i.test(
     message

@@ -16,6 +16,7 @@ import {
   isTodayScheduleQuery,
   isNextMatchesQuery,
   isUpcomingAnalysisQuery,
+  isSingleMatchAnalysisQuery,
   formatTodayScheduleReply,
   formatUpcomingScheduleReply,
   isSwapOrTradeQuery,
@@ -26,7 +27,7 @@ import {
   formatTeamOutcomeReply,
   ninjaGreeting,
 } from "@/lib/copilot";
-import { resolveHeadToHead, findTeamMentionedInMessage } from "@/lib/team-resolver";
+import { resolveHeadToHead, findTeamMentionedInMessage, resolveTeamsFromMessage } from "@/lib/team-resolver";
 import { buildPremiumMatchReport, buildPremiumReportForTeams, buildFreeUpcomingAnalysis } from "@/lib/match-analysis";
 import { isPremiumQuery } from "@/lib/payments";
 import type { CopilotContext } from "@/lib/types";
@@ -54,15 +55,6 @@ export async function POST(request: Request) {
   const txHash: string | undefined = body.txHash;
 
   const isPremium = isPremiumQuery(message);
-
-  if (isPremium && !txHash) {
-    return NextResponse.json({
-      reply: "This is a premium query. It costs 0.01 USDC — confirm the payment in Keplr when prompted.",
-      model: "payment-required",
-      provider: "payment",
-      intent: "payment",
-    });
-  }
 
   let liveData = "";
   let upcomingData = "";
@@ -205,6 +197,61 @@ export async function POST(request: Request) {
     }
   }
 
+  // Single-match analysis — premium (win %, form, H2H from API — never generic LLM)
+  if (isSingleMatchAnalysisQuery(message)) {
+    try {
+      const teams = await resolveTeamsFromMessage(message);
+      if (teams) {
+        const [team1, team2] = teams;
+        if (!txHash) {
+          return NextResponse.json({
+            reply: [
+              `${ninjaGreeting()} **${team1.name} vs ${team2.name}** analysis is premium intelligence — **0.01 USDC** on Injective testnet.`,
+              "",
+              "Connect Keplr and ask again — I'll prompt you to pay and unlock win chances, tournament form, and head-to-head.",
+            ].join("\n"),
+            model: "payment-required",
+            provider: "payment",
+            intent: "payment",
+          });
+        }
+        const premium = await buildPremiumReportForTeams(team1, team2);
+        return NextResponse.json({
+          reply: premium.report,
+          model: "premium-analysis",
+          provider: "api-football",
+          intent: "match-analysis",
+          fixtureId: premium.fixtureId,
+        });
+      }
+
+      if (!txHash) {
+        return NextResponse.json({
+          reply: `${ninjaGreeting()} Match analysis costs **0.01 USDC**. Name both teams clearly, e.g. **"analyze France vs Morocco"**, then confirm payment in Keplr.`,
+          model: "payment-required",
+          provider: "payment",
+          intent: "payment",
+        });
+      }
+    } catch (e) {
+      return NextResponse.json({
+        reply: `Could not build match analysis: ${(e as Error).message}`,
+        model: "error",
+        provider: "api-football",
+        intent: "match-analysis",
+      });
+    }
+  }
+
+  if (isPremium && !txHash) {
+    return NextResponse.json({
+      reply: `${ninjaGreeting()} That's a **premium query** — **0.01 USDC** on Injective testnet. Connect Keplr and try again to pay & unlock.`,
+      model: "payment-required",
+      provider: "payment",
+      intent: "payment",
+    });
+  }
+
   // Next / upcoming matches — schedule only (no invented scores)
   if (isNextMatchesQuery(message)) {
     try {
@@ -286,6 +333,16 @@ export async function POST(request: Request) {
   const systemContext = [liveData, upcomingData, recentData, h2hData, matchContext, walletContext]
     .filter(Boolean)
     .join("\n\n");
+
+  // Never let the LLM improvise single-match analysis — that's premium API data
+  if (isSingleMatchAnalysisQuery(message)) {
+    return NextResponse.json({
+      reply: `${ninjaGreeting()} I couldn't resolve both teams in that message, ninja. Try **"analyze France vs Morocco"** — premium analysis is **0.01 USDC**.`,
+      model: "payment-required",
+      provider: "payment",
+      intent: "payment",
+    });
+  }
 
   try {
     const { reply, model, provider: usedProvider } = await chatCompletion(
