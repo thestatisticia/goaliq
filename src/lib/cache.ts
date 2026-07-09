@@ -26,6 +26,8 @@ export const CACHE_TTL = {
   fixtures: 2 * 60_000,
   standings: 5 * 60_000,
   matchDetail: 20_000,
+  matchDetailFinished: 5 * 60_000,
+  apisportsDateFixtures: 30 * 60_000,
   h2h: 30 * 60_000,
   predictions: 30 * 60_000,
   teamForm: 10 * 60_000,

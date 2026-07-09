@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { MIN_PREMIUM_USDC, PRICING } from "@/lib/payments";
 import { LandingLiveTicker } from "@/components/LandingLiveTicker";
+import { HeroMockup } from "@/components/HeroMockup";
 import { GoaliqWordmark } from "@/components/GoaliqWordmark";
 
 export function LandingPage() {
@@ -212,50 +213,6 @@ export function LandingPage() {
           </Link>
         </div>
       </section>
-    </div>
-  );
-}
-
-function HeroMockup() {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-goaliq-borderSubtle bg-goaliq-card shadow-card dark:border-goaliq-border dark:bg-gradient-to-b dark:from-[#0d1525] dark:to-[#090e17]">
-      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-goaliq-accent/50 to-transparent opacity-60 dark:opacity-100" />
-
-      <div className="relative p-5">
-        <div className="mb-4 flex items-center gap-2 border-b border-goaliq-borderSubtle pb-3">
-          <GoaliqWordmark size="sm" showTagline={false} />
-          <span className="text-sm font-medium text-goaliq-muted">Dashboard</span>
-          <span className="ml-auto flex items-center gap-1.5 rounded-full border border-goaliq-live/20 bg-goaliq-live/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-goaliq-live">
-            <span className="h-1.5 w-1.5 rounded-full bg-goaliq-live animate-pulse" />
-            Live
-          </span>
-        </div>
-
-        <div className="space-y-2">
-          <MockMatch live home="Switzerland" away="Colombia" score="1–1" minute="FT (pens)" />
-          <MockMatch home="France" away="Morocco" score="—" time="Upcoming · 20:00" />
-        </div>
-
-        <div className="mt-3 rounded-lg border border-goaliq-borderSubtle bg-goaliq-surface p-3">
-          <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-goaliq-muted">Copilot</p>
-          <p className="text-xs text-goaliq-fg/70">&quot;Win chances for Switzerland?&quot; → Premium unlock</p>
-        </div>
-
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg border border-goaliq-accent/20 bg-goaliq-accent/5 py-2.5 dark:bg-goaliq-accent/10">
-            <p className="text-lg font-bold tabular-nums text-goaliq-accent dark:text-goaliq-accent">61%</p>
-            <p className="text-[10px] text-goaliq-muted">Win chance</p>
-          </div>
-          <div className="rounded-lg border border-goaliq-borderSubtle bg-goaliq-surface py-2.5">
-            <p className="text-lg font-bold tabular-nums text-goaliq-fg">WWDLW</p>
-            <p className="text-[10px] text-goaliq-muted">Form</p>
-          </div>
-          <div className="rounded-lg border border-goaliq-gold/20 bg-goaliq-gold/5 py-2.5 dark:border-goaliq-gold/30 dark:bg-goaliq-gold/10">
-            <p className="text-lg font-bold tabular-nums text-goaliq-gold">0.02</p>
-            <p className="text-[10px] text-goaliq-muted">USDC</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

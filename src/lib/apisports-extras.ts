@@ -1,6 +1,6 @@
 import { getCached, setCached, CACHE_TTL } from "./cache";
-import { footballApiRequest } from "./api-football-client";
-import type { MatchEvent, Team, TeamMatchStatistics } from "./types";
+import { footballApiRequest, getActiveApiFootballKeys } from "./api-football-client";
+import type { MatchEvent, TeamMatchStatistics } from "./types";
 import type { Match } from "./types";
 
 interface ApisportsEvent {
@@ -17,8 +17,30 @@ interface ApisportsStatRow {
   statistics: { type: string; value: number | string | null }[];
 }
 
+type DateFixtureRow = {
+  fixture: { id: number };
+  teams: { home: { name: string }; away: { name: string } };
+  league: { id: number };
+};
+
+async function loadApisportsFixturesForDate(date: string): Promise<DateFixtureRow[]> {
+  const cacheKey = `apisports-date-fixtures-${date}`;
+  const cached = getCached<DateFixtureRow[]>(cacheKey);
+  if (cached) return cached;
+
+  const fixtures = await footballApiRequest<DateFixtureRow[]>(`/fixtures?date=${date}`);
+  setCached(cacheKey, fixtures, CACHE_TTL.apisportsDateFixtures);
+  return fixtures;
+}
+
 /** Resolve API-Football fixture id from team names + date (cached). */
 export async function resolveApisportsFixtureId(match: Match): Promise<number | null> {
+  if (!getActiveApiFootballKeys().length) return null;
+
+  const fdMapKey = `apisports-fd-map-${match.fixture.id}`;
+  const fdMapped = getCached<number>(fdMapKey);
+  if (fdMapped) return fdMapped;
+
   const home = match.teams.home.name;
   const away = match.teams.away.name;
   if (!home || home === "TBD" || !away || away === "TBD") return null;
@@ -26,13 +48,13 @@ export async function resolveApisportsFixtureId(match: Match): Promise<number | 
   const date = match.fixture.date.slice(0, 10);
   const cacheKey = `apisports-fid-${home}-${away}-${date}`;
   const cached = getCached<number>(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    setCached(fdMapKey, cached, CACHE_TTL.tournament);
+    return cached;
+  }
 
   try {
-    const fixtures = await footballApiRequest<
-      { fixture: { id: number }; teams: { home: { name: string }; away: { name: string } }; league: { id: number } }[]
-    >(`/fixtures?date=${date}`);
-
+    const fixtures = await loadApisportsFixturesForDate(date);
     const wc = fixtures.filter((f) => f.league?.id === 1);
     const hit = wc.find(
       (f) =>
@@ -40,7 +62,8 @@ export async function resolveApisportsFixtureId(match: Match): Promise<number | 
         f.teams.away.name.toLowerCase() === away.toLowerCase()
     );
     if (hit) {
-      setCached(cacheKey, hit.fixture.id, CACHE_TTL.matchDetail);
+      setCached(cacheKey, hit.fixture.id, CACHE_TTL.tournament);
+      setCached(fdMapKey, hit.fixture.id, CACHE_TTL.tournament);
       return hit.fixture.id;
     }
   } catch {
@@ -71,7 +94,7 @@ export async function fetchApisportsEvents(fixtureId: number, live = false): Pro
   try {
     const rows = await footballApiRequest<ApisportsEvent[]>(`/fixtures/events?fixture=${fixtureId}`);
     const events = rows.map(mapEvent);
-    setCached(cacheKey, events, live ? 10_000 : CACHE_TTL.matchDetail);
+    setCached(cacheKey, events, live ? 10_000 : CACHE_TTL.matchDetailFinished);
     return events;
   } catch {
     return cached ?? [];
@@ -89,27 +112,33 @@ export async function fetchApisportsStatistics(fixtureId: number): Promise<TeamM
       team: { id: r.team.id, name: r.team.name, logo: r.team.logo ?? "" },
       statistics: r.statistics,
     }));
-    setCached(cacheKey, statistics, CACHE_TTL.matchDetail);
+    setCached(cacheKey, statistics, CACHE_TTL.matchDetailFinished);
     return statistics;
   } catch {
-    return [];
+    return cached ?? [];
   }
 }
 
 export async function fetchApisportsMatchExtras(
   match: Match,
-  opts?: { live?: boolean }
+  opts?: { live?: boolean; fetchEvents?: boolean; fetchStats?: boolean }
 ): Promise<{
   events: MatchEvent[];
   statistics: TeamMatchStatistics[];
 }> {
+  if (!getActiveApiFootballKeys().length) return { events: [], statistics: [] };
+
+  const fetchEvents = opts?.fetchEvents ?? true;
+  const fetchStats = opts?.fetchStats ?? true;
+  if (!fetchEvents && !fetchStats) return { events: [], statistics: [] };
+
   const fixtureId = await resolveApisportsFixtureId(match);
   if (!fixtureId) return { events: [], statistics: [] };
 
   const live = opts?.live ?? false;
   const [events, statistics] = await Promise.all([
-    fetchApisportsEvents(fixtureId, live),
-    fetchApisportsStatistics(fixtureId),
+    fetchEvents ? fetchApisportsEvents(fixtureId, live) : Promise.resolve([]),
+    fetchStats ? fetchApisportsStatistics(fixtureId) : Promise.resolve([]),
   ]);
   return { events, statistics };
 }

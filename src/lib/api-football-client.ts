@@ -4,6 +4,15 @@ const BASE_URL = "https://v3.football.api-sports.io";
 
 /** Keys marked exhausted for this server process (daily quota hit). */
 const exhaustedKeys = new Set<string>();
+let exhaustedSinceUtcDate: string | null = null;
+
+function maybeResetExhaustedKeys(): void {
+  const today = new Date().toISOString().slice(0, 10);
+  if (exhaustedSinceUtcDate && exhaustedSinceUtcDate < today) {
+    exhaustedKeys.clear();
+    exhaustedSinceUtcDate = null;
+  }
+}
 
 function parseKeysFromEnv(): string[] {
   const keys: string[] = [];
@@ -30,6 +39,7 @@ function parseKeysFromEnv(): string[] {
 
 /** All configured keys that are not exhausted in this process. */
 export function getActiveApiFootballKeys(): string[] {
+  maybeResetExhaustedKeys();
   return parseKeysFromEnv().filter((k) => !exhaustedKeys.has(k));
 }
 
@@ -39,6 +49,7 @@ export function getApiFootballKeyCount(): number {
 
 export function markApiKeyExhausted(key: string): void {
   exhaustedKeys.add(key);
+  exhaustedSinceUtcDate = new Date().toISOString().slice(0, 10);
   console.warn(`[api-football] Key …${key.slice(-6)} hit daily limit — trying next key if available`);
 }
 

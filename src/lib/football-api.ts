@@ -6,7 +6,7 @@ import { applyKnockoutWinners, pickRicherTeam, getKnockoutRoundOrder } from "./k
 import { getCached, getCachedStale, setCached, CACHE_TTL } from "./cache";
 import type { Match, StandingGroup, MatchEvent, MatchDetail } from "./types";
 import { getFallbackMatches, WC_FALLBACK_TEAMS, isFallbackDataset, type WorldCupTeam } from "./wc-fallback";
-import { footballApiRequest, getApiFootballKeyCount } from "./api-football-client";
+import { footballApiRequest, getApiFootballKeyCount, getActiveApiFootballKeys } from "./api-football-client";
 import { fetchApisportsMatchExtras } from "./apisports-extras";
 import {
   getFdWorldCupMatches,
@@ -679,11 +679,23 @@ function mergeEvents(primary: MatchEvent[], extra: MatchEvent[]): MatchEvent[] {
 }
 
 export async function getMatchDetail(id: number): Promise<MatchDetail | null> {
-  let fdRaw = null;
   let match: Match | null = (await loadWorldCupTournamentMatches()).find((m) => m.fixture.id === id) ?? null;
+  const prelimStatus = match?.fixture.status.short ?? "";
+  const livePhase =
+    LIVE_STATUSES.has(prelimStatus) ||
+    prelimStatus === "P" ||
+    ["LIVE", "HT", "ET", "1H", "2H"].includes(prelimStatus);
+  const finished = FINISHED.has(prelimStatus);
 
+  const detailCacheKey = `match-detail-v2-${id}`;
+  if (!livePhase) {
+    const cachedDetail = getCached<MatchDetail>(detailCacheKey);
+    if (cachedDetail) return cachedDetail;
+  }
+
+  let fdRaw = null;
   if (isFootballDataConfigured()) {
-    fdRaw = await getFdMatchById(id);
+    fdRaw = await getFdMatchById(id, finished);
     if (fdRaw) match = mapFdMatch(fdRaw);
   }
 
@@ -692,23 +704,24 @@ export async function getMatchDetail(id: number): Promise<MatchDetail | null> {
   }
   if (!match) return null;
 
-  const livePhase =
-    match.fixture.status.short === "P" ||
-    ["LIVE", "HT", "ET", "1H", "2H"].includes(match.fixture.status.short);
-
   let events: MatchEvent[] = fdRaw ? mapFdGoalsToEvents(fdRaw) : [];
   let statistics = fdRaw ? mapFdStatistics(fdRaw) : [];
   let source: MatchDetail["source"] = "football-data";
 
-  const needsExtras =
-    livePhase ||
-    isPenaltyShootout(match.fixture.status.short) ||
-    hasPenaltyScore(match) ||
-    events.length === 0 ||
-    statistics.length === 0;
+  const apiAvailable = getActiveApiFootballKeys().length > 0;
+  const penaltyContext =
+    isPenaltyShootout(match.fixture.status.short) || hasPenaltyScore(match);
 
-  if (needsExtras) {
-    const extras = await fetchApisportsMatchExtras(match, { live: livePhase });
+  const needsApiEvents = apiAvailable && events.length === 0 && (livePhase || penaltyContext);
+  const needsApiStats = apiAvailable && statistics.length === 0 && (livePhase || penaltyContext);
+  const needsLiveRefresh = apiAvailable && livePhase;
+
+  if (needsApiEvents || needsApiStats || needsLiveRefresh) {
+    const extras = await fetchApisportsMatchExtras(match, {
+      live: livePhase,
+      fetchEvents: needsApiEvents || needsLiveRefresh,
+      fetchStats: needsApiStats || needsLiveRefresh,
+    });
     if (extras.events.length) {
       events = mergeEvents(events, extras.events);
       source = statistics.length && fdRaw ? "mixed" : events.length ? "api-football" : source;
@@ -721,7 +734,7 @@ export async function getMatchDetail(id: number): Promise<MatchDetail | null> {
 
   const referee = fdRaw?.referees?.[0]?.name ?? null;
 
-  return {
+  const detail: MatchDetail = {
     match: normalizeMatch(match),
     events,
     statistics,
@@ -729,6 +742,10 @@ export async function getMatchDetail(id: number): Promise<MatchDetail | null> {
     source,
     statsAvailable: events.length > 0 || statistics.length > 0,
   };
+
+  const ttl = livePhase ? CACHE_TTL.live : finished ? CACHE_TTL.matchDetailFinished : CACHE_TTL.matchDetail;
+  setCached(detailCacheKey, detail, ttl);
+  return detail;
 }
 
 export async function getMatchEvents(id: number): Promise<MatchEvent[]> {

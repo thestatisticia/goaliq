@@ -6,7 +6,7 @@ import type { Match, MatchEvent, TeamMatchStatistics } from "@/lib/types";
 import { MatchCard } from "./MatchCard";
 import { MatchEventsList, MatchStatisticsGrid } from "./MatchStatsPanel";
 import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
-import { cn, isLive, isPenaltyShootout, hasPenaltyScore, formatMatchScore } from "@/lib/utils";
+import { cn, isLive, isFinishedStatus, isPenaltyShootout, hasPenaltyScore, formatMatchScore } from "@/lib/utils";
 
 interface MatchDetailResponse {
   match?: Match;
@@ -25,10 +25,10 @@ export function LiveMatchPanel({ match: initialMatch }: { match: Match }) {
   const displayMatch = detail?.match ?? initialMatch;
   const inShootout =
     isPenaltyShootout(displayMatch.fixture.status.short) || hasPenaltyScore(displayMatch);
-  const pollMs =
-    isPenaltyShootout(displayMatch.fixture.status.short) || isLive(displayMatch.fixture.status.short)
-      ? 10_000
-      : 15_000;
+  const isLiveMatch =
+    isLive(displayMatch.fixture.status.short) || isPenaltyShootout(displayMatch.fixture.status.short);
+  const isFinished = isFinishedStatus(displayMatch.fixture.status.short);
+  const pollMs = isLiveMatch ? 20_000 : 0;
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +39,7 @@ export function LiveMatchPanel({ match: initialMatch }: { match: Match }) {
       if (showSpinner) setLoading(true);
       setFetchError(null);
       try {
-        const r = await fetch(`/api/matches/${initialMatch.fixture.id}`, { cache: "no-store" });
+        const r = await fetch(`/api/matches/${initialMatch.fixture.id}`);
         const data: MatchDetailResponse = await r.json();
         if (cancelled) return;
         if (!r.ok || !data.match) {
@@ -59,6 +59,8 @@ export function LiveMatchPanel({ match: initialMatch }: { match: Match }) {
     }
 
     loadDetail(true);
+    if (!pollMs) return;
+
     const interval = setInterval(() => loadDetail(false), pollMs);
     return () => {
       cancelled = true;
@@ -126,7 +128,9 @@ export function LiveMatchPanel({ match: initialMatch }: { match: Match }) {
                   <p className="text-[11px] text-gray-500 text-center">
                     {inShootout
                       ? "Shootout score updates via football-data.org. Individual kicks need API-Football quota."
-                      : "Detailed events load from API-Football when daily quota is available. Scores update via football-data.org."}
+                      : isFinished
+                        ? "Goal scorers and cards load from football-data.org. Team statistics need API-Football quota."
+                        : "Live events update via football-data.org. Detailed statistics use API-Football when quota is available."}
                   </p>
                 )}
               </>

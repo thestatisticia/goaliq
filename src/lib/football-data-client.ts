@@ -1,4 +1,4 @@
-import { getCached, setCached, CACHE_TTL } from "./cache";
+import { getCached, getCachedStale, setCached, CACHE_TTL } from "./cache";
 import { serverEnv } from "./server-env";
 
 const BASE_URL = "https://api.football-data.org/v4";
@@ -114,7 +114,11 @@ export async function footballDataRequest<T>(path: string, cacheKey: string, ttl
     next: { revalidate: Math.max(1, Math.floor(ttlMs / 1000)) },
   });
 
-  if (res.status === 429) throw new Error("FD_RATE_LIMIT");
+  if (res.status === 429) {
+    const stale = getCachedStale<T>(cacheKey);
+    if (stale) return stale;
+    throw new Error("FD_RATE_LIMIT");
+  }
 
   if (!res.ok) {
     const text = await res.text();
@@ -144,12 +148,15 @@ export async function getFdWorldCupTeams(): Promise<FdTeam[]> {
   return data.teams ?? [];
 }
 
-export async function getFdMatchById(id: number): Promise<FdMatch | null> {
+export async function getFdMatchById(id: number, finished = false): Promise<FdMatch | null> {
+  const cacheKey = `fd-match-${id}`;
+  const ttl = finished ? CACHE_TTL.matchDetailFinished : CACHE_TTL.matchDetail;
   try {
-    const data = await footballDataRequest<FdMatch>(`/matches/${id}`, `fd-match-${id}`, CACHE_TTL.matchDetail);
+    const data = await footballDataRequest<FdMatch>(`/matches/${id}`, cacheKey, ttl);
     return data?.id ? data : null;
   } catch {
-    return null;
+    const stale = getCachedStale<FdMatch>(cacheKey);
+    return stale?.id ? stale : null;
   }
 }
 
