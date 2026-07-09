@@ -12,6 +12,7 @@ const config: Config = {
           card: "var(--gq-card)",
           surface: "var(--gq-surface)",
           border: "var(--gq-border)",
+          borderSubtle: "var(--gq-border-subtle)",
           muted: "var(--gq-muted)",
           accent: "var(--gq-accent)",
           accentDim: "var(--gq-accent-dim)",

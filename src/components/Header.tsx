@@ -19,7 +19,7 @@ export function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-goaliq-border/80 bg-goaliq-bg/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-goaliq-borderSubtle bg-goaliq-bg">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
         <Link href="/" className="group transition-opacity hover:opacity-90">
           <GoaliqWordmark size="md" />
@@ -41,7 +41,7 @@ export function Header() {
               <span className="hidden sm:inline">{label}</span>
             </Link>
           ))}
-          <div className="ml-2 flex items-center gap-2 border-l border-goaliq-border pl-2">
+          <div className="ml-2 flex items-center gap-2 border-l border-goaliq-borderSubtle pl-2">
             <ThemeToggle />
             <KeplrWallet />
           </div>

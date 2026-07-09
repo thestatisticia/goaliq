@@ -59,7 +59,7 @@ export function LandingLiveTicker() {
   if (items.length === 0) return null;
 
   return (
-    <div className="border-b border-goaliq-border/80 bg-goaliq-card/40">
+    <div className="border-b border-goaliq-borderSubtle bg-goaliq-surface/50">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 sm:px-6">
         <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-goaliq-live">
           {live.length > 0 ? (

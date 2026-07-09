@@ -19,7 +19,7 @@ export function LandingPage() {
       <section className="relative mx-auto max-w-6xl px-4 py-16 font-hero sm:py-24">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-goaliq-border bg-goaliq-card/60 px-4 py-1.5 text-xs font-medium text-goaliq-muted">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-goaliq-borderSubtle bg-goaliq-surface px-4 py-1.5 text-xs font-medium text-goaliq-muted">
               <span className="h-1.5 w-1.5 rounded-full bg-goaliq-success animate-pulse" />
               Injective Global Cup 2026
             </div>
@@ -45,7 +45,7 @@ export function LandingPage() {
               </Link>
               <Link
                 href="/copilot"
-                className="inline-flex items-center gap-2 rounded-xl border border-goaliq-border bg-goaliq-card/50 px-7 py-3.5 font-medium transition-colors hover:border-goaliq-accent/40"
+                className="inline-flex items-center gap-2 rounded-xl border border-goaliq-borderSubtle bg-goaliq-card px-7 py-3.5 font-medium transition-colors hover:border-goaliq-accent/30"
               >
                 Try AI Copilot <Bot className="h-4 w-4" />
               </Link>
@@ -56,8 +56,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Stats — unchanged position, cleaner type */}
-      <section className="border-y border-goaliq-border bg-goaliq-card/30 py-10 font-sans">
+      {/* Stats */}
+      <section className="border-y border-goaliq-borderSubtle bg-goaliq-surface/40 py-10 font-sans">
         <div className="mx-auto grid max-w-4xl grid-cols-2 gap-8 px-4 sm:grid-cols-4 sm:px-6">
           <Stat value="48" label="World Cup teams" />
           <Stat value="104" label="Tournament matches" />
@@ -114,7 +114,7 @@ export function LandingPage() {
       </section>
 
       {/* Payment flow */}
-      <section className="border-t border-goaliq-border bg-goaliq-surface/50 py-20 font-sans">
+      <section className="border-t border-goaliq-borderSubtle bg-goaliq-surface/30 py-20 font-sans">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <div className="mb-12 max-w-lg">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-goaliq-muted">Micropayments</p>
@@ -146,7 +146,7 @@ export function LandingPage() {
               Built for fans who want real scores, straight answers, and optional AI depth — not another generic chatbot skin.
             </p>
           </div>
-          <ul className="divide-y divide-goaliq-border border-t border-goaliq-border">
+          <ul className="divide-y divide-goaliq-borderSubtle border-t border-goaliq-borderSubtle">
             <WhyRow title="Real-time scores" desc="Live, today, upcoming, and full tournament results from football-data.org." />
             <WhyRow title="Grounded AI copilot" desc="Answers tied to live fixture data — schedules, outcomes, and bracket state." />
             <WhyRow title="Pay per insight" desc="No accounts or subscriptions. Unlock only the analysis you need." />
@@ -179,7 +179,7 @@ export function LandingPage() {
       </section>
 
       {/* Powered by */}
-      <section className="border-t border-goaliq-border py-12 font-sans">
+      <section className="border-t border-goaliq-borderSubtle py-12 font-sans">
         <p className="mb-6 text-center text-[11px] font-medium uppercase tracking-[0.25em] text-goaliq-muted">
           Built for the Injective Global Cup
         </p>
@@ -197,7 +197,7 @@ export function LandingPage() {
 
       {/* Final CTA */}
       <section className="mx-auto max-w-3xl px-4 py-20 font-sans sm:px-6">
-        <div className="rounded-2xl border border-goaliq-border bg-goaliq-card px-6 py-12 text-center sm:px-10">
+        <div className="rounded-2xl border border-goaliq-borderSubtle bg-goaliq-card px-6 py-12 text-center sm:px-10">
           <h2 className="font-display text-3xl font-semibold tracking-tight text-goaliq-fg sm:text-4xl">
             Follow the World Cup with clarity
           </h2>
@@ -218,34 +218,42 @@ export function LandingPage() {
 
 function HeroMockup() {
   return (
-    <div className="relative rounded-2xl border border-goaliq-border bg-goaliq-card/60 p-4 shadow-card backdrop-blur-sm">
-      <div className="mb-3 flex items-center gap-2 border-b border-goaliq-border/50 pb-3">
-        <GoaliqWordmark size="sm" showTagline={false} />
-        <span className="text-sm font-medium text-goaliq-muted">Dashboard</span>
-        <span className="ml-auto flex items-center gap-1 text-xs text-goaliq-live">
-          <span className="h-1.5 w-1.5 rounded-full bg-goaliq-live animate-pulse" /> Live
-        </span>
-      </div>
-      <div className="space-y-2">
-        <MockMatch live home="Switzerland" away="Colombia" score="1–1" minute="FT (pens)" />
-        <MockMatch home="France" away="Morocco" score="—" time="Upcoming · 20:00" />
-      </div>
-      <div className="mt-3 rounded-lg border border-goaliq-border/50 bg-black/20 p-3">
-        <p className="text-[10px] uppercase tracking-wider text-goaliq-muted mb-1">Copilot</p>
-        <p className="text-xs text-slate-400">"Win chances for Switzerland?" → Premium unlock</p>
-      </div>
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-lg bg-goaliq-accent/10 py-2">
-          <p className="text-lg font-bold text-goaliq-accent">61%</p>
-          <p className="text-[10px] text-goaliq-muted">Win chance</p>
+    <div className="relative overflow-hidden rounded-2xl border border-goaliq-borderSubtle bg-goaliq-card shadow-card dark:border-goaliq-border dark:bg-gradient-to-b dark:from-[#0d1525] dark:to-[#090e17]">
+      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-goaliq-accent/50 to-transparent opacity-60 dark:opacity-100" />
+
+      <div className="relative p-5">
+        <div className="mb-4 flex items-center gap-2 border-b border-goaliq-borderSubtle pb-3">
+          <GoaliqWordmark size="sm" showTagline={false} />
+          <span className="text-sm font-medium text-goaliq-muted">Dashboard</span>
+          <span className="ml-auto flex items-center gap-1.5 rounded-full border border-goaliq-live/20 bg-goaliq-live/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-goaliq-live">
+            <span className="h-1.5 w-1.5 rounded-full bg-goaliq-live animate-pulse" />
+            Live
+          </span>
         </div>
-        <div className="rounded-lg bg-white/5 py-2">
-          <p className="text-lg font-bold">WWDLW</p>
-          <p className="text-[10px] text-goaliq-muted">Form</p>
+
+        <div className="space-y-2">
+          <MockMatch live home="Switzerland" away="Colombia" score="1–1" minute="FT (pens)" />
+          <MockMatch home="France" away="Morocco" score="—" time="Upcoming · 20:00" />
         </div>
-        <div className="rounded-lg bg-goaliq-gold/10 py-2">
-          <p className="text-lg font-bold text-goaliq-gold">0.01</p>
-          <p className="text-[10px] text-goaliq-muted">USDC</p>
+
+        <div className="mt-3 rounded-lg border border-goaliq-borderSubtle bg-goaliq-surface p-3">
+          <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-goaliq-muted">Copilot</p>
+          <p className="text-xs text-goaliq-fg/70">&quot;Win chances for Switzerland?&quot; → Premium unlock</p>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg border border-goaliq-accent/20 bg-goaliq-accent/5 py-2.5 dark:bg-goaliq-accent/10">
+            <p className="text-lg font-bold tabular-nums text-goaliq-accent dark:text-goaliq-accent">61%</p>
+            <p className="text-[10px] text-goaliq-muted">Win chance</p>
+          </div>
+          <div className="rounded-lg border border-goaliq-borderSubtle bg-goaliq-surface py-2.5">
+            <p className="text-lg font-bold tabular-nums text-goaliq-fg">WWDLW</p>
+            <p className="text-[10px] text-goaliq-muted">Form</p>
+          </div>
+          <div className="rounded-lg border border-goaliq-gold/20 bg-goaliq-gold/5 py-2.5 dark:border-goaliq-gold/30 dark:bg-goaliq-gold/10">
+            <p className="text-lg font-bold tabular-nums text-goaliq-gold">0.02</p>
+            <p className="text-[10px] text-goaliq-muted">USDC</p>
+          </div>
         </div>
       </div>
     </div>
@@ -304,7 +312,7 @@ function ProductPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col border-t-2 border-goaliq-border pt-6">
+    <div className="flex flex-col border-t border-goaliq-borderSubtle pt-6">
       <h3 className="font-display text-xl font-semibold text-goaliq-fg">{title}</h3>
       <div className="my-5 flex-1 rounded-lg border border-goaliq-border bg-goaliq-bg/60 p-3">{children}</div>
       <ul className="mb-5 space-y-2">
@@ -334,7 +342,7 @@ function FlowStep({
   last?: boolean;
 }) {
   return (
-    <li className={`relative pb-8 sm:pb-0 ${last ? "" : "sm:border-r sm:border-goaliq-border sm:pr-4"}`}>
+    <li className={`relative pb-8 sm:pb-0 ${last ? "" : "sm:border-r sm:border-goaliq-borderSubtle sm:pr-4"}`}>
       <span className="mb-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-goaliq-border text-xs font-semibold text-goaliq-muted">
         {step}
       </span>

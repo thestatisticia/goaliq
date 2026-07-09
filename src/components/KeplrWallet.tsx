@@ -18,7 +18,7 @@ export function KeplrWallet() {
         <button
           onClick={connect}
           disabled={connecting}
-          className="flex items-center gap-1.5 rounded-lg bg-goaliq-accent px-3 py-2 text-sm font-medium text-black hover:bg-goaliq-accent/90 disabled:opacity-60 transition-colors"
+          className="flex items-center gap-1.5 rounded-lg bg-goaliq-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60 transition-opacity"
         >
           {connecting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
