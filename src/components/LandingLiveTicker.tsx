@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Match } from "@/lib/types";
-import { formatMatchTime, regulationScore } from "@/lib/utils";
+import { formatMatchScore, formatMatchTime } from "@/lib/utils";
 import { dashboardApiUrl } from "@/lib/dashboard-client";
 import { Radio } from "lucide-react";
 
@@ -35,9 +35,8 @@ export function LandingLiveTicker() {
   const items: { key: string; label: string; href: string }[] = [];
 
   for (const m of live.slice(0, 4)) {
-    const reg = regulationScore(m);
-    const score =
-      reg.home != null && reg.away != null ? `${reg.home}–${reg.away}` : "–";
+    const scoreObj = formatMatchScore(m);
+    const score = scoreObj.suffix ? `${scoreObj.main} ${scoreObj.suffix}` : scoreObj.main;
     items.push({
       key: `live-${m.fixture.id}`,
       label: `${m.teams.home.name} ${score} ${m.teams.away.name} · ${formatMatchTime(m.fixture.status.short, m.fixture.status.elapsed)}`,
@@ -77,7 +76,7 @@ export function LandingLiveTicker() {
             <Link
               key={item.key}
               href={item.href}
-              className="truncate text-sm text-slate-300 transition-colors hover:text-goaliq-accent"
+              className="truncate text-sm text-goaliq-fg/80 transition-colors hover:text-goaliq-accent"
             >
               {item.label}
             </Link>

@@ -6,6 +6,7 @@ import { LayoutDashboard, MessageSquare, Wallet, GitCompare } from "lucide-react
 import { cn } from "@/lib/utils";
 import { KeplrWallet } from "@/components/KeplrWallet";
 import { GoaliqWordmark } from "@/components/GoaliqWordmark";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -33,14 +34,15 @@ export function Header() {
                 "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 pathname === href
                   ? "bg-goaliq-accent/10 text-goaliq-accent"
-                  : "text-goaliq-muted hover:bg-white/5 hover:text-white"
+                  : "text-goaliq-muted hover:bg-goaliq-surface hover:text-goaliq-fg"
               )}
             >
               <Icon className="h-4 w-4" />
               <span className="hidden sm:inline">{label}</span>
             </Link>
           ))}
-          <div className="ml-2 border-l border-goaliq-border pl-2">
+          <div className="ml-2 flex items-center gap-2 border-l border-goaliq-border pl-2">
+            <ThemeToggle />
             <KeplrWallet />
           </div>
         </nav>

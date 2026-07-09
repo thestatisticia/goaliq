@@ -35,6 +35,25 @@ export async function connectKeplr(network: InjectiveNetwork = getDefaultNetwork
   };
 }
 
+/** Restore session without opening Keplr popup (only works if already authorized). */
+export async function restoreKeplrSession(network: InjectiveNetwork = getDefaultNetwork()) {
+  if (typeof window === "undefined" || !window.keplr) return null;
+  const chain = INJECTIVE_CHAINS[network];
+  try {
+    const key = await window.keplr.getKey(chain.chainId);
+    const evmAddress = getEthereumAddress(key.bech32Address);
+    return {
+      address: key.bech32Address,
+      evmAddress,
+      name: key.name,
+      chainId: chain.chainId,
+      network,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchUsdcBalance(
   evmAddress: string,
   network: InjectiveNetwork = getDefaultNetwork()

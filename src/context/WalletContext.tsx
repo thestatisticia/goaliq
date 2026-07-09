@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { connectKeplr, fetchInjBalance, fetchUsdcBalance, KeplrNotInstalledError } from "@/lib/keplr";
+import { connectKeplr, fetchInjBalance, fetchUsdcBalance, KeplrNotInstalledError, restoreKeplrSession } from "@/lib/keplr";
 import { getDefaultNetwork, type InjectiveNetwork } from "@/lib/injective-chain";
 
 interface WalletState {
@@ -95,14 +95,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  // Reconnect silently if user connected before
+  // Restore session silently — never auto-open Keplr popup on page load
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored || !window.keplr) return;
 
-    connect().catch(() => {
-      localStorage.removeItem(STORAGE_KEY);
-    });
+    restoreKeplrSession(network)
+      .then(async (session) => {
+        if (!session) {
+          localStorage.removeItem(STORAGE_KEY);
+          return;
+        }
+        setAddress(session.address);
+        setEvmAddress(session.evmAddress);
+        setName(session.name);
+        setChainId(session.chainId);
+        const [inj, usdc] = await Promise.all([
+          fetchInjBalance(session.address, network),
+          fetchUsdcBalance(session.evmAddress, network),
+        ]);
+        setInjBalance(inj);
+        setUsdcBalance(usdc);
+      })
+      .catch(() => {
+        localStorage.removeItem(STORAGE_KEY);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

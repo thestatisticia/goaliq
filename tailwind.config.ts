@@ -2,28 +2,28 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
         goaliq: {
-          bg: "#060a12",
-          card: "#0c1220",
-          surface: "#111827",
-          border: "#1e293b",
-          muted: "#64748b",
-          accent: "#38bdf8",
-          accentDim: "#0ea5e9",
-          gold: "#fbbf24",
-          live: "#f87171",
-          success: "#34d399",
+          bg: "var(--gq-bg)",
+          fg: "var(--gq-fg)",
+          card: "var(--gq-card)",
+          surface: "var(--gq-surface)",
+          border: "var(--gq-border)",
+          muted: "var(--gq-muted)",
+          accent: "var(--gq-accent)",
+          accentDim: "var(--gq-accent-dim)",
+          gold: "var(--gq-gold)",
+          live: "var(--gq-live)",
+          success: "var(--gq-success)",
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-      },
-      boxShadow: {
-        card: "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 4px 24px -4px rgba(0,0,0,0.4)",
-        glow: "0 0 40px -8px rgba(56,189,248,0.25)",
+        sans: ["var(--font-body)", "system-ui", "sans-serif"],
+        hero: ["var(--font-hero)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "serif"],
       },
     },
   },
