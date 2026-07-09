@@ -9,7 +9,7 @@ import { PaymentInfo, PaymentReceipt } from "@/components/PaymentInfo";
 import { PredictionShareCard } from "@/components/PredictionShareCard";
 import { savePredictionReceipt } from "@/lib/prediction-receipts";
 import { PRICING } from "@/lib/payments";
-import { sendPremiumPayment } from "@/lib/usdc-payment";
+import { fetchX402Resource, x402PremiumUrl } from "@/lib/x402-client";
 
 interface PremiumUnlockProps {
   matchId: number;
@@ -42,33 +42,31 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
       return;
     }
 
+    if (type === "h2h" && (!team1Id || !team2Id)) {
+      setError("Team IDs required for head-to-head unlock.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const hash = await sendPremiumPayment(evmAddress as `0x${string}`, paymentWallet, price);
+      const url =
+        type === "analysis"
+          ? x402PremiumUrl(`/premium/analysis?matchId=${matchId}`)
+          : x402PremiumUrl(`/premium/h2h?team1=${team1Id}&team2=${team2Id}`);
 
-      const verify = await fetch("/api/payment/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txHash: hash, from: evmAddress, amount: price }),
+      const { data: payload, txHash: hash } = await fetchX402Resource<Record<string, unknown>>(url, {
+        evmAddress: evmAddress as `0x${string}`,
+        payTo: paymentWallet,
+        amountUsdc: price,
       });
-      const v = await verify.json();
-      if (!v.verified) throw new Error(v.error ?? "Payment failed");
 
       setTxHash(hash);
+      setData(payload);
       await refreshBalance();
 
-      const res = await fetch("/api/premium/unlock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, matchId, team1: team1Id, team2: team2Id, evmAddress, txHash: hash }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? `Error ${res.status}`);
-      setData(json);
-
-      const match = json.match as { teams?: { home: { name: string }; away: { name: string } }; league?: { round?: string } } | undefined;
-      const pred = json.prediction as {
+      const match = payload.match as { teams?: { home: { name: string }; away: { name: string } }; league?: { round?: string } } | undefined;
+      const pred = payload.prediction as {
         percent?: { home: string; away: string; draw: string };
         home?: { name: string };
         away?: { name: string };
@@ -85,6 +83,8 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
         txHash: hash,
         evmAddress,
         price: `${price} USDC`,
+        paidVia: "x402",
+        tier: tier.id,
         percentHome: pred?.percent?.home,
         percentAway: pred?.percent?.away,
         percentDraw: pred?.percent?.draw,
@@ -106,13 +106,13 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
           {data ? <Unlock className="h-4 w-4 text-goaliq-gold" /> : <Lock className="h-4 w-4 text-goaliq-gold" />}
           <span className="font-medium text-sm">{title}</span>
         </div>
-        <span className="text-xs text-goaliq-gold">{tier.label} · {price} USDC</span>
+        <span className="text-xs text-goaliq-gold">{tier.label} · {price} USDC · x402</span>
       </div>
 
       <PaymentInfo />
 
       {!isConnected && (
-        <p className="text-xs text-gray-400">Connect Keplr to pay with testnet USDC.</p>
+        <p className="text-xs text-gray-400">Connect Keplr — x402 returns 402, you pay USDC, content unlocks.</p>
       )}
 
       {isConnected && !hasUsdc && (
@@ -158,11 +158,13 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
           className="w-full rounded-lg bg-goaliq-gold/20 border border-goaliq-gold/40 py-2.5 text-sm font-medium text-goaliq-gold hover:bg-goaliq-gold/30 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />}
-          {!isConnected ? "Connect & Pay" : hasUsdc ? `Pay ${price} USDC & Unlock` : "Need USDC"}
+          {!isConnected ? "Connect & Pay via x402" : hasUsdc ? `Pay ${price} USDC (x402)` : "Need USDC"}
         </button>
       )}
 
-      {txHash && <PaymentReceipt txHash={txHash} />}
+      {txHash && txHash !== "already-paid" && (
+        <PaymentReceipt txHash={txHash} amountUsdc={price} paidVia="x402" />
+      )}
       {error && <p className="text-xs text-goaliq-live">{error}</p>}
     </div>
   );

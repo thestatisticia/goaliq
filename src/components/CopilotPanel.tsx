@@ -8,7 +8,8 @@ import { usePaymentConfig } from "@/context/PaymentConfigContext";
 import { cn } from "@/lib/utils";
 import { PaymentInfo } from "@/components/PaymentInfo";
 import { isPremiumQuery, getTierForQuery } from "@/lib/payments";
-import { sendPremiumPayment } from "@/lib/usdc-payment";
+import { fetchX402Resource, x402PremiumUrl } from "@/lib/x402-client";
+import { savePredictionReceipt } from "@/lib/prediction-receipts";
 import { ChatMessageBody } from "@/components/ChatMessageBody";
 import { COPILOT_PROMPT_CHIPS } from "@/lib/copilot-prompts";
 
@@ -37,6 +38,7 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [payingUsdc, setPayingUsdc] = useState<number | null>(null);
   const [models, setModels] = useState<ModelOption[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
   const [llmReady, setLlmReady] = useState(false);
@@ -101,19 +103,49 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
     try {
       if (needsPayment && wallet.evmAddress && paymentWallet) {
         setPaying(true);
-        txHash = await sendPremiumPayment(wallet.evmAddress as `0x${string}`, paymentWallet, tier.usdc);
-
-        const verify = await fetch("/api/payment/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ txHash, from: wallet.evmAddress, amount: tier.usdc }),
+        setPayingUsdc(tier.usdc);
+        const { data: x402Data, txHash: hash } = await fetchX402Resource<{
+          reply: string;
+          tier?: string;
+          price?: string;
+        }>(x402PremiumUrl("/copilot"), {
+          evmAddress: wallet.evmAddress as `0x${string}`,
+          payTo: paymentWallet,
+          amountUsdc: tier.usdc,
+          init: {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text, context }),
+          },
         });
-        const v = await verify.json();
-        if (!v.verified) {
-          throw new Error(v.error ?? "Payment verification failed");
-        }
+
+        txHash = hash;
         await wallet.refreshBalance();
         setPaying(false);
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: stripPaymentNoise(x402Data.reply ?? "No response."),
+            timestamp: new Date(),
+          },
+        ]);
+
+        savePredictionReceipt({
+          matchId: context.matchId ?? null,
+          homeTeam: context.homeTeam ?? "Copilot",
+          awayTeam: context.awayTeam ?? tier.label,
+          type: "copilot",
+          txHash: hash,
+          evmAddress: wallet.evmAddress,
+          price: x402Data.price ?? `${tier.usdc} USDC`,
+          paidVia: "x402",
+          tier: tier.id,
+        });
+
+        return;
       }
 
       const model = models.find((m) => m.id === selectedModel);
@@ -155,6 +187,7 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
     } finally {
       setLoading(false);
       setPaying(false);
+      setPayingUsdc(null);
     }
   }
 
@@ -226,7 +259,7 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
               {paying ? <Coins className="h-4 w-4 text-goaliq-gold animate-pulse" /> : <Bot className="h-4 w-4 text-goaliq-accent animate-pulse" />}
             </div>
             <div className="rounded-lg bg-gray-800/80 px-3 py-2 text-sm text-gray-400">
-              {paying ? `Confirm ${getTierForQuery(input).usdc} USDC payment in Keplr...` : "Thinking..."}
+              {paying ? `x402 · confirm ${payingUsdc ?? "…"} USDC in Keplr...` : "Thinking..."}
             </div>
           </div>
         )}

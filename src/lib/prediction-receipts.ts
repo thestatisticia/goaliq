@@ -5,13 +5,15 @@ export interface PredictionReceipt {
   matchId: number | null;
   homeTeam: string;
   awayTeam: string;
-  type: "analysis" | "h2h" | "compare";
+  type: "analysis" | "h2h" | "compare" | "copilot";
   txHash: string;
   evmAddress: string;
   percentHome?: string;
   percentAway?: string;
   percentDraw?: string;
   price: string;
+  paidVia?: "x402" | "usdc";
+  tier?: string;
   createdAt: string;
   explorerUrl: string;
 }
@@ -48,7 +50,17 @@ export function savePredictionReceipt(
   };
   const all = [receipt, ...readAll().filter((r) => r.txHash !== receipt.txHash)];
   writeAll(all);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("goaliq-receipts-updated"));
+  }
   return receipt;
+}
+
+export function getTotalUsdcSpent(evmAddress: string): number {
+  return getReceiptsForWallet(evmAddress).reduce((sum, r) => {
+    const n = parseFloat(r.price.replace(/[^\d.]/g, ""));
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
 }
 
 export function getPredictionReceipts(): PredictionReceipt[] {

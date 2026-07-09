@@ -1,7 +1,7 @@
 import { DashboardTabs } from "@/components/DashboardTabs";
 import { StatsBar } from "@/components/StatsBar";
 import { DailyDigest } from "@/components/DailyDigest";
-import { PredictionHistory } from "@/components/PredictionHistory";
+import { InjectiveReceiptPanel } from "@/components/InjectiveReceiptPanel";
 
 export default function DashboardPage() {
   return (
@@ -18,7 +18,7 @@ export default function DashboardPage() {
 
       <DailyDigest />
 
-      <PredictionHistory />
+      <InjectiveReceiptPanel />
 
       <section className="rounded-2xl border border-goaliq-borderSubtle bg-goaliq-card p-4 shadow-card sm:p-6">
         <DashboardTabs />
