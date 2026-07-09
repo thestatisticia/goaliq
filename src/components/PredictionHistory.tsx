@@ -20,7 +20,7 @@ export function PredictionHistory() {
 
   if (!isConnected) {
     return (
-      <div className="rounded-xl border border-goaliq-border bg-goaliq-card/40 p-4 text-sm text-goaliq-muted">
+      <div className="rounded-xl border border-goaliq-borderSubtle bg-goaliq-card p-4 text-sm text-goaliq-muted">
         Connect Keplr to see your on-chain prediction receipts.
       </div>
     );
@@ -28,17 +28,17 @@ export function PredictionHistory() {
 
   if (receipts.length === 0) {
     return (
-      <div className="rounded-xl border border-goaliq-border bg-goaliq-card/40 p-4 text-sm text-goaliq-muted">
+      <div className="rounded-xl border border-goaliq-borderSubtle bg-goaliq-card p-4 text-sm text-goaliq-muted">
         No premium predictions yet — unlock analysis on a match page to get a verified Injective receipt.
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-goaliq-border bg-goaliq-card/40 p-4 space-y-3">
+    <div className="rounded-xl border border-goaliq-borderSubtle bg-goaliq-card p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Receipt className="h-4 w-4 text-goaliq-gold" />
-        <h2 className="font-semibold text-sm">Your prediction receipts</h2>
+        <Receipt className="h-4 w-4 text-goaliq-fg" />
+        <h2 className="font-semibold text-sm text-goaliq-fg">Your prediction receipts</h2>
         <span className="text-xs text-goaliq-muted">({receipts.length})</span>
       </div>
 
@@ -46,10 +46,10 @@ export function PredictionHistory() {
         {receipts.map((r) => (
           <li
             key={r.id}
-            className="rounded-lg border border-goaliq-border/60 bg-black/20 px-3 py-2 text-xs"
+            className="rounded-lg border border-goaliq-borderSubtle bg-goaliq-surface px-3 py-2 text-xs"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="font-medium text-white">
+              <span className="font-medium text-goaliq-fg">
                 {r.homeTeam} vs {r.awayTeam}
               </span>
               <span className="text-goaliq-gold shrink-0">{r.price}</span>

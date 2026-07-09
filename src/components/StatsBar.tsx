@@ -35,44 +35,44 @@ export function StatsBar() {
 
   return (
     <div className="grid gap-3 sm:grid-cols-3 mb-6">
-      <div className="rounded-xl border border-goaliq-border bg-goaliq-card p-4 flex items-center gap-3">
-        <div className="rounded-lg bg-goaliq-accent/20 p-2">
-          <Database className="h-5 w-5 text-goaliq-accent" />
+      <div className="rounded-xl border border-goaliq-borderSubtle bg-goaliq-card p-4 flex items-center gap-3">
+        <div className="rounded-lg border border-goaliq-borderSubtle bg-goaliq-surface p-2">
+          <Database className="h-5 w-5 text-goaliq-fg" />
         </div>
         <div>
-          <p className="text-xs text-gray-500">Data Source</p>
-          <p className="font-semibold text-sm">{sourceLabel} · Live</p>
-          <p className="text-[10px] text-gray-600">
+          <p className="text-xs text-goaliq-muted">Data Source</p>
+          <p className="font-semibold text-sm text-goaliq-fg">{sourceLabel} · Live</p>
+          <p className="text-[10px] text-goaliq-muted">
             {total ?? "—"} WC matches · 48 teams
             {warning ? " · check env vars" : ""}
           </p>
         </div>
       </div>
 
-      <div className="rounded-xl border border-goaliq-border bg-goaliq-card p-4 flex items-center gap-3">
-        <div className="rounded-lg bg-goaliq-gold/20 p-2">
-          <Zap className="h-5 w-5 text-goaliq-gold" />
+      <div className="rounded-xl border border-goaliq-borderSubtle bg-goaliq-card p-4 flex items-center gap-3">
+        <div className="rounded-lg border border-goaliq-borderSubtle bg-goaliq-surface p-2">
+          <Zap className="h-5 w-5 text-goaliq-fg" />
         </div>
         <div>
-          <p className="text-xs text-gray-500">x402 Premium</p>
-          <p className="font-semibold text-sm">0.01 USDC / unlock</p>
-          <p className="text-[10px] text-gray-600">Injective testnet · balance verified</p>
+          <p className="text-xs text-goaliq-muted">x402 Premium</p>
+          <p className="font-semibold text-sm text-goaliq-fg">from 0.02 USDC / unlock</p>
+          <p className="text-[10px] text-goaliq-muted">Injective testnet · balance verified</p>
         </div>
       </div>
 
-      <div className="rounded-xl border border-goaliq-border bg-goaliq-card p-4 flex items-center gap-3">
-        <div className="rounded-lg bg-blue-500/20 p-2">
-          <Wallet className="h-5 w-5 text-blue-400" />
+      <div className="rounded-xl border border-goaliq-borderSubtle bg-goaliq-card p-4 flex items-center gap-3">
+        <div className="rounded-lg border border-goaliq-borderSubtle bg-goaliq-surface p-2">
+          <Wallet className="h-5 w-5 text-goaliq-fg" />
         </div>
         <div>
-          <p className="text-xs text-gray-500">Wallet</p>
+          <p className="text-xs text-goaliq-muted">Wallet</p>
           {isConnected ? (
             <>
-              <p className="font-semibold text-sm">{usdcBalance ?? "0"} USDC · {injBalance ?? "0"} INJ</p>
-              <p className="text-[10px] text-gray-600 font-mono truncate max-w-[180px]">{evmAddress}</p>
+              <p className="font-semibold text-sm text-goaliq-fg">{usdcBalance ?? "0"} USDC · {injBalance ?? "0"} INJ</p>
+              <p className="text-[10px] text-goaliq-muted font-mono truncate max-w-[180px]">{evmAddress}</p>
             </>
           ) : (
-            <p className="text-sm text-gray-400">Connect Keplr →</p>
+            <p className="text-sm text-goaliq-muted">Connect Keplr →</p>
           )}
         </div>
       </div>

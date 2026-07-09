@@ -64,7 +64,7 @@ export function MatchCard({ match, compact, showKickoff }: MatchCardProps) {
             LIVE {formatMatchTime(match.fixture.status.short, match.fixture.status.elapsed)}
           </span>
         ) : (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-goaliq-muted">
             {showKickoff
               ? kickoffLabel
               : onPens && isFinishedStatus(match.fixture.status.short)
@@ -73,7 +73,7 @@ export function MatchCard({ match, compact, showKickoff }: MatchCardProps) {
           </span>
         )}
         {match.fixture.venue && !compact && (
-          <span className="text-xs text-gray-600 truncate max-w-[140px]">{match.fixture.venue.name}</span>
+          <span className="text-xs text-goaliq-muted truncate max-w-[140px]">{match.fixture.venue.name}</span>
         )}
       </div>
 
@@ -92,7 +92,7 @@ export function MatchCard({ match, compact, showKickoff }: MatchCardProps) {
           highlight={home.winner === true}
           align="left"
         />
-        <span className="text-gray-600 text-sm font-mono">
+        <span className="text-goaliq-muted text-sm font-mono">
           {showPenTally ? "pens" : onPens && validPens && scores.penalties ? scores.penalties : "vs"}
         </span>
         <TeamRow
@@ -129,12 +129,12 @@ function TeamRow({
       {logo ? (
         <Image src={logo} alt={name} width={28} height={28} className="rounded-full" unoptimized />
       ) : (
-        <div className="h-7 w-7 rounded-full bg-gray-700 flex items-center justify-center text-xs">
+        <div className="h-7 w-7 rounded-full bg-goaliq-surface border border-goaliq-borderSubtle flex items-center justify-center text-xs text-goaliq-fg">
           {name[0] ?? "?"}
         </div>
       )}
       <div className={cn(align === "right" && "text-right")}>
-        <p className={cn("font-medium text-sm truncate max-w-[100px]", highlight && "text-goaliq-accent")}>
+        <p className={cn("font-medium text-sm truncate max-w-[100px] text-goaliq-fg", highlight && "text-goaliq-accent")}>
           {name}
         </p>
         {score !== null && (

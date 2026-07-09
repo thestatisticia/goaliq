@@ -69,7 +69,7 @@ export function DashboardTabs() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 border-b border-goaliq-border pb-3">
+      <div className="flex flex-wrap gap-2 border-b border-goaliq-borderSubtle pb-3">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -77,13 +77,13 @@ export function DashboardTabs() {
             className={cn(
               "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
               tab === t.id
-                ? "bg-goaliq-accent/20 text-goaliq-accent"
-                : "text-gray-400 hover:text-white hover:bg-white/5"
+                ? "bg-goaliq-surface text-goaliq-fg border border-goaliq-border"
+                : "text-goaliq-muted hover:text-goaliq-fg hover:bg-goaliq-surface"
             )}
           >
             {t.icon}
             {t.label}
-            <span className="rounded-full bg-black/30 px-1.5 text-xs">{t.count}</span>
+            <span className="rounded-full bg-goaliq-surface border border-goaliq-borderSubtle px-1.5 text-xs text-goaliq-fg">{t.count}</span>
           </button>
         ))}
       </div>
@@ -95,7 +95,7 @@ export function DashboardTabs() {
       )}
 
       {warning && !error && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
           {warning}
         </div>
       )}
@@ -128,11 +128,11 @@ export function DashboardTabs() {
           {tab === "results" && (
             <div className="space-y-6">
               {resultsByRound.length === 0 ? (
-                <p className="text-gray-500 text-sm py-8 text-center">No completed World Cup matches yet.</p>
+                <p className="text-goaliq-muted text-sm py-8 text-center">No completed World Cup matches yet.</p>
               ) : (
                 resultsByRound.map(({ round, matches }) => (
                   <div key={round}>
-                    <h3 className="text-sm font-semibold text-goaliq-gold mb-3">{round}</h3>
+                    <h3 className="text-sm font-semibold text-goaliq-fg mb-3">{round}</h3>
                     <div className="grid gap-3 sm:grid-cols-2">
                       {matches.map((m) => (
                         <MatchCard key={m.fixture.id} match={m} />
@@ -147,14 +147,14 @@ export function DashboardTabs() {
             <div className="space-y-4">
               {knockout.map((g) => (
                 <div key={g.group} className="rounded-xl border border-goaliq-border bg-goaliq-card p-4">
-                  <h3 className="font-semibold text-goaliq-gold mb-3">{g.group}</h3>
+                  <h3 className="font-semibold text-goaliq-fg mb-3">{g.group}</h3>
                   <div className="space-y-2">
                     {g.table.map((row) => (
                       <div
                         key={row.rank}
                         className="flex items-center justify-between text-sm border-b border-goaliq-border/30 pb-2"
                       >
-                        <span className="text-gray-300">{row.form ?? row.team.name}</span>
+                        <span className="text-goaliq-fg">{row.form ?? row.team.name}</span>
                         <span className="text-goaliq-accent text-xs font-medium">{row.team.name} won</span>
                       </div>
                     ))}
@@ -174,13 +174,13 @@ export function DashboardTabs() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={t.logo} alt="" className="h-6 w-6 object-contain" />
                   ) : (
-                    <div className="h-6 w-6 rounded-full bg-gray-700" />
+                    <div className="h-6 w-6 rounded-full bg-goaliq-surface border border-goaliq-borderSubtle" />
                   )}
                   <span>{t.name}</span>
                 </div>
               ))}
               {teams.length === 0 && (
-                <p className="text-gray-500 text-sm col-span-full py-8 text-center">No teams loaded yet.</p>
+                <p className="text-goaliq-muted text-sm col-span-full py-8 text-center">No teams loaded yet.</p>
               )}
             </div>
           )}
@@ -210,7 +210,7 @@ function MatchGrid({
   showKickoff?: boolean;
 }) {
   if (matches.length === 0) {
-    return <p className="text-gray-500 text-sm py-8 text-center">{empty}</p>;
+    return <p className="text-goaliq-muted text-sm py-8 text-center">{empty}</p>;
   }
   return (
     <div className="grid gap-3 sm:grid-cols-2">
