@@ -6,7 +6,7 @@ import { applyKnockoutWinners, pickRicherTeam, getKnockoutRoundOrder } from "./k
 import { getCached, getCachedStale, setCached, CACHE_TTL } from "./cache";
 import type { Match, StandingGroup, MatchEvent, MatchDetail } from "./types";
 import { getFallbackMatches, WC_FALLBACK_TEAMS, isFallbackDataset, type WorldCupTeam } from "./wc-fallback";
-import { footballApiRequest, getApiFootballKeyCount, getActiveApiFootballKeys, getApiFootballHealth } from "./api-football-client";
+import { footballApiRequest, getApiFootballKeyCount, getActiveApiFootballKeys } from "./api-football-client";
 import { fetchApisportsMatchExtras } from "./apisports-extras";
 import {
   getFdWorldCupMatches,
@@ -732,23 +732,6 @@ export async function getMatchDetail(id: number): Promise<MatchDetail | null> {
 
   const referee = fdRaw?.referees?.[0]?.name ?? null;
 
-  let extrasNote: string | undefined;
-  if (events.length === 0 || statistics.length === 0) {
-    if (!getApiFootballKeyCount()) {
-      extrasNote =
-        "football-data.org provides scores only for World Cup 2026 — add API_FOOTBALL_KEY for goal events and team statistics.";
-    } else if (!apiAvailable) {
-      const health = await getApiFootballHealth();
-      extrasNote = health.message;
-    } else if (statistics.length === 0 && events.length === 0) {
-      extrasNote = "Could not load events or statistics for this match from API-Football.";
-    } else if (statistics.length === 0) {
-      extrasNote = "Team statistics were not returned for this fixture.";
-    } else if (events.length === 0) {
-      extrasNote = "Goal scorers and cards were not returned for this fixture.";
-    }
-  }
-
   const detail: MatchDetail = {
     match: normalizeMatch(match),
     events,
@@ -756,7 +739,6 @@ export async function getMatchDetail(id: number): Promise<MatchDetail | null> {
     referee,
     source,
     statsAvailable: events.length > 0 || statistics.length > 0,
-    extrasNote,
   };
 
   const ttl = livePhase ? CACHE_TTL.live : finished ? CACHE_TTL.matchDetailFinished : CACHE_TTL.matchDetail;

@@ -10,7 +10,6 @@ export function StatsBar() {
   const [source, setSource] = useState("loading");
   const [total, setTotal] = useState<number | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
-  const [apiFootballStatus, setApiFootballStatus] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(dashboardApiUrl(), { cache: "no-store" })
@@ -21,14 +20,6 @@ export function StatsBar() {
         setWarning(d.warning ?? null);
       })
       .catch(() => setSource("error"));
-
-    fetch("/api/football-status", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => {
-        const st = d.apiFootball?.status;
-        if (st && st !== "ok") setApiFootballStatus(d.apiFootball.message);
-      })
-      .catch(() => {});
   }, []);
 
   const sourceLabel =
@@ -55,9 +46,6 @@ export function StatsBar() {
             {total ?? "—"} WC matches · 48 teams
             {warning ? " · check env vars" : ""}
           </p>
-          {apiFootballStatus && (
-            <p className="text-[10px] text-amber-500/90 mt-1 leading-snug">{apiFootballStatus}</p>
-          )}
         </div>
       </div>
 

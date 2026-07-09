@@ -19,8 +19,6 @@ export default function MatchPage() {
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [statistics, setStatistics] = useState<TeamMatchStatistics[]>([]);
   const [referee, setReferee] = useState<string | null>(null);
-  const [statsAvailable, setStatsAvailable] = useState(false);
-  const [extrasNote, setExtrasNote] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,8 +29,6 @@ export default function MatchPage() {
         setEvents(data.events ?? []);
         setStatistics(data.statistics ?? []);
         setReferee(data.referee ?? null);
-        setStatsAvailable(data.statsAvailable ?? false);
-        setExtrasNote(data.extrasNote ?? null);
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -154,13 +150,6 @@ export default function MatchPage() {
           <MatchStatisticsGrid statistics={statistics} />
         </div>
       </div>
-
-      {(extrasNote || !statsAvailable) && (
-        <p className={`text-xs text-center ${extrasNote ? "text-amber-400/90" : "text-gray-500"}`}>
-          {extrasNote ??
-            "Goal scorers, cards, and team stats need API-Football — football-data.org only provides scores for WC 2026."}
-        </p>
-      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <PremiumUnlock matchId={id} type="analysis" homeTeamName={match.teams.home.name} awayTeamName={match.teams.away.name} />

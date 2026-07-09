@@ -6,14 +6,13 @@ import type { Match, MatchEvent, TeamMatchStatistics } from "@/lib/types";
 import { MatchCard } from "./MatchCard";
 import { MatchEventsList, MatchStatisticsGrid } from "./MatchStatsPanel";
 import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
-import { cn, isLive, isFinishedStatus, isPenaltyShootout, hasPenaltyScore, formatMatchScore } from "@/lib/utils";
+import { cn, isLive, isPenaltyShootout, hasPenaltyScore, formatMatchScore } from "@/lib/utils";
 
 interface MatchDetailResponse {
   match?: Match;
   events?: MatchEvent[];
   statistics?: TeamMatchStatistics[];
   statsAvailable?: boolean;
-  extrasNote?: string;
   error?: string;
 }
 
@@ -28,7 +27,6 @@ export function LiveMatchPanel({ match: initialMatch }: { match: Match }) {
     isPenaltyShootout(displayMatch.fixture.status.short) || hasPenaltyScore(displayMatch);
   const isLiveMatch =
     isLive(displayMatch.fixture.status.short) || isPenaltyShootout(displayMatch.fixture.status.short);
-  const isFinished = isFinishedStatus(displayMatch.fixture.status.short);
   const pollMs = isLiveMatch ? 20_000 : 0;
 
   useEffect(() => {
@@ -125,20 +123,6 @@ export function LiveMatchPanel({ match: initialMatch }: { match: Match }) {
                     <MatchStatisticsGrid statistics={statistics} />
                   </div>
                 </div>
-                {!detail?.statsAvailable && detail?.extrasNote && (
-                  <p className="text-[11px] text-amber-400/90 text-center bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2">
-                    {detail.extrasNote}
-                  </p>
-                )}
-                {!detail?.statsAvailable && !detail?.extrasNote && (
-                  <p className="text-[11px] text-gray-500 text-center">
-                    {inShootout
-                      ? "Shootout score updates via football-data.org. Individual kicks need API-Football."
-                      : isFinished
-                        ? "Goal scorers and team stats need API-Football — football-data.org only provides scores for WC 2026."
-                        : "Live scores via football-data.org. Events and statistics need API-Football quota."}
-                  </p>
-                )}
               </>
             )}
             <Link
