@@ -20,6 +20,7 @@ export default function MatchPage() {
   const [statistics, setStatistics] = useState<TeamMatchStatistics[]>([]);
   const [referee, setReferee] = useState<string | null>(null);
   const [statsAvailable, setStatsAvailable] = useState(false);
+  const [extrasNote, setExtrasNote] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function MatchPage() {
         setStatistics(data.statistics ?? []);
         setReferee(data.referee ?? null);
         setStatsAvailable(data.statsAvailable ?? false);
+        setExtrasNote(data.extrasNote ?? null);
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -153,9 +155,10 @@ export default function MatchPage() {
         </div>
       </div>
 
-      {!statsAvailable && (
-        <p className="text-xs text-gray-500 text-center">
-          Goal scorers, cards, and corner stats come from API-Football when quota is available.
+      {(extrasNote || !statsAvailable) && (
+        <p className={`text-xs text-center ${extrasNote ? "text-amber-400/90" : "text-gray-500"}`}>
+          {extrasNote ??
+            "Goal scorers, cards, and team stats need API-Football — football-data.org only provides scores for WC 2026."}
         </p>
       )}
 

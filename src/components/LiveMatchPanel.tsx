@@ -13,6 +13,7 @@ interface MatchDetailResponse {
   events?: MatchEvent[];
   statistics?: TeamMatchStatistics[];
   statsAvailable?: boolean;
+  extrasNote?: string;
   error?: string;
 }
 
@@ -124,13 +125,18 @@ export function LiveMatchPanel({ match: initialMatch }: { match: Match }) {
                     <MatchStatisticsGrid statistics={statistics} />
                   </div>
                 </div>
-                {!detail?.statsAvailable && (
+                {!detail?.statsAvailable && detail?.extrasNote && (
+                  <p className="text-[11px] text-amber-400/90 text-center bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2">
+                    {detail.extrasNote}
+                  </p>
+                )}
+                {!detail?.statsAvailable && !detail?.extrasNote && (
                   <p className="text-[11px] text-gray-500 text-center">
                     {inShootout
-                      ? "Shootout score updates via football-data.org. Individual kicks need API-Football quota."
+                      ? "Shootout score updates via football-data.org. Individual kicks need API-Football."
                       : isFinished
-                        ? "Goal scorers and cards load from football-data.org. Team statistics need API-Football quota."
-                        : "Live events update via football-data.org. Detailed statistics use API-Football when quota is available."}
+                        ? "Goal scorers and team stats need API-Football — football-data.org only provides scores for WC 2026."
+                        : "Live scores via football-data.org. Events and statistics need API-Football quota."}
                   </p>
                 )}
               </>

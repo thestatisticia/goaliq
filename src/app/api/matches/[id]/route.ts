@@ -15,6 +15,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       statistics: detail.statistics,
       referee: detail.referee,
       statsAvailable: detail.statsAvailable,
+      extrasNote: detail.extrasNote,
       source: detail.source,
     });
   } catch (e) {

@@ -46,6 +46,8 @@ export interface MatchDetail {
   referee?: string | null;
   source: "football-data" | "api-football" | "mixed";
   statsAvailable: boolean;
+  /** Why events/stats may be missing — shown in UI */
+  extrasNote?: string;
 }
 
 export interface StandingRow {
