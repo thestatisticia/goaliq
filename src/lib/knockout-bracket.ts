@@ -16,6 +16,38 @@ const ROUND_ORDER: [string, number][] = [
   ["final", 6],
 ];
 
+/**
+ * FIFA World Cup 2026 knockout feeder paths (index into previous round, sorted by match id).
+ * Chronological date order does NOT match bracket paths — using date caused wrong TBD fills.
+ */
+const FEEDER_PAIRS_BY_ROUND: Record<number, number[][]> = {
+  /** Round of 32 → Round of 16 */
+  2: [
+    [0, 1],
+    [2, 3],
+    [8, 9],
+    [10, 11],
+    [4, 5],
+    [6, 7],
+    [12, 13],
+    [14, 15],
+  ],
+  /** Round of 16 → Quarter-finals */
+  3: [
+    [0, 1],
+    [4, 5],
+    [2, 3],
+    [6, 7],
+  ],
+  /** Quarter-finals → Semi-finals */
+  4: [
+    [0, 1],
+    [2, 3],
+  ],
+  /** Semi-finals → Final */
+  6: [[0, 1]],
+};
+
 export function isTbdTeamName(name: string | undefined | null): boolean {
   return !name?.trim() || name.trim().toUpperCase() === "TBD";
 }
@@ -27,6 +59,10 @@ export function getKnockoutRoundOrder(round: string): number {
     if (lower.includes(key)) return order;
   }
   return -1;
+}
+
+function sortRoundMatches(matches: Match[]): Match[] {
+  return matches.slice().sort((a, b) => a.fixture.id - b.fixture.id);
 }
 
 function isFinishedMatch(m: Match): boolean {
@@ -68,6 +104,13 @@ export function pickRicherTeam(
   return overlay;
 }
 
+function feederPairIndexes(roundOrder: number, matchIndex: number): [number, number] {
+  const pairs = FEEDER_PAIRS_BY_ROUND[roundOrder];
+  const pair = pairs?.[matchIndex];
+  if (pair && pair.length === 2) return [pair[0], pair[1]];
+  return [matchIndex * 2, matchIndex * 2 + 1];
+}
+
 /** Fill TBD knockout slots from winners of the previous round (API often lags). */
 export function applyKnockoutWinners(matches: Match[]): Match[] {
   const result = matches.map((m) => ({
@@ -89,18 +132,16 @@ export function applyKnockoutWinners(matches: Match[]): Match[] {
 
   const orders = Array.from(byRound.keys()).sort((a, b) => a - b);
   for (let ri = 1; ri < orders.length; ri++) {
-    const prevRound = byRound
-      .get(orders[ri - 1])!
-      .slice()
-      .sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
-    const currRound = byRound
-      .get(orders[ri])!
-      .slice()
-      .sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
+    const currOrder = orders[ri];
+    if (currOrder === 5) continue; // third-place playoff uses semi losers — not propagated here
+
+    const prevRound = sortRoundMatches(byRound.get(orders[ri - 1])!);
+    const currRound = sortRoundMatches(byRound.get(currOrder)!);
 
     for (let i = 0; i < currRound.length; i++) {
-      const feederA = prevRound[i * 2];
-      const feederB = prevRound[i * 2 + 1];
+      const [idxA, idxB] = feederPairIndexes(currOrder, i);
+      const feederA = prevRound[idxA];
+      const feederB = prevRound[idxB];
       const winnerA = feederA ? getKnockoutWinner(feederA) : null;
       const winnerB = feederB ? getKnockoutWinner(feederB) : null;
       const idx = result.findIndex((m) => m.fixture.id === currRound[i].fixture.id);
