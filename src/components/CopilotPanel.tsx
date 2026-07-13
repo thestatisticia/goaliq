@@ -7,7 +7,7 @@ import { useWallet } from "@/context/WalletContext";
 import { usePaymentConfig } from "@/context/PaymentConfigContext";
 import { cn } from "@/lib/utils";
 import { PaymentInfo } from "@/components/PaymentInfo";
-import { isPremiumQuery, getTierForQuery } from "@/lib/payments";
+import { MIN_PREMIUM_USDC, isPremiumQuery, getTierForQuery } from "@/lib/payments";
 import { fetchX402Resource, x402PremiumUrl } from "@/lib/x402-client";
 import { savePredictionReceipt } from "@/lib/prediction-receipts";
 import { ChatMessageBody } from "@/components/ChatMessageBody";
@@ -31,7 +31,9 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
       id: "welcome",
       role: "assistant",
       content:
-        "Hey ninja! I'm **GOALIQ AI** — your World Cup intelligence copilot.\n\n• **Free:** scores, today's matches, friendly chat\n• **0.01 USDC:** win chances, form, head-to-head previews",
+        "Hey ninja! I'm **GOALIQ AI** — your World Cup intelligence copilot.\n\n• **Free:** live coverage, today's matches, tournament chat\n• **Premium:** unlock football intelligence from **" +
+        MIN_PREMIUM_USDC +
+        " USDC** — win chances, tactical breakdowns, forecasts",
       timestamp: new Date(),
     },
   ]);

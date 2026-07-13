@@ -5,6 +5,8 @@ import { ArrowLeft, Bot } from "lucide-react";
 import { CopilotPanel } from "@/components/CopilotPanel";
 import type { CopilotContext } from "@/lib/types";
 
+import { MIN_PREMIUM_USDC } from "@/lib/payments";
+
 export function CopilotPageClient({ context }: { context?: CopilotContext }) {
   const matchLabel =
     context?.homeTeam && context?.awayTeam
@@ -28,8 +30,8 @@ export function CopilotPageClient({ context }: { context?: CopilotContext }) {
             <p className="text-xs font-semibold uppercase tracking-widest text-goaliq-accent">AI Copilot</p>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">GOALIQ AI</h1>
             <p className="mt-1 text-sm text-goaliq-muted">
-              World Cup scores, today&apos;s fixtures, win chances, and head-to-head — free chat or 0.01 USDC premium
-              insights
+              Free tournament chat and live coverage. Unlock premium football intelligence from{" "}
+              {MIN_PREMIUM_USDC} USDC per insight.
             </p>
             {matchLabel && (
               <p className="mt-2 text-xs text-goaliq-gold">

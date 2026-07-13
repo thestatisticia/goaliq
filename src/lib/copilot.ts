@@ -1,5 +1,6 @@
 import type { Match, CopilotContext } from "./types";
 import { ninjaGreeting, formatGreetingReply } from "./copilot-personality";
+import { MIN_PREMIUM_USDC, PRICING } from "./payments";
 
 const INTENT_PATTERNS: { pattern: RegExp; intent: string }[] = [
   { pattern: /score|winning|result/i, intent: "score" },
@@ -20,6 +21,17 @@ export function isTodayScheduleQuery(message: string): boolean {
   const hasMatch = /\b(match|matches|game|games|fixture|fixtures|schedule|kick.?off|playing)\b/i.test(message);
   const asksWorldCup = /world cup|wc\b|fifa/i.test(message);
   return hasToday && (hasMatch || asksWorldCup);
+}
+
+/** Free head-to-head / stats-between-teams queries (not win-chance or tactical unlocks). */
+export function isHeadToHeadQuery(message: string): boolean {
+  if (wantsMatchAnalysis(message)) return false;
+  if (isTournamentForecastQuery(message)) return false;
+  if (/head[\s-]?to[\s-]?head|\bh2h\b/i.test(message)) return true;
+  if (/\b(?:stats?|statistics)\b/i.test(message) && /\b(?:between|versus|vs\.?|and|&)\b/i.test(message)) {
+    return true;
+  }
+  return /\b(?:record|history|meetings?)\b/i.test(message) && /\b(?:between|versus|vs\.?)\b/i.test(message);
 }
 
 /** User wants preview / analysis, not just kickoff times. */
@@ -124,7 +136,7 @@ export function formatProgressionReply(
       );
     }
 
-    lines.push("", "Want win chances for their next match? Just ask, ninja (premium, 0.01 USDC).");
+    lines.push("", `Want win chances for their next match? Unlock match intelligence from ${MIN_PREMIUM_USDC} USDC.`);
     return lines.join("\n");
   }
 
@@ -346,7 +358,7 @@ export function formatTeamFormReply(team: { id?: number; name: string }, results
     "",
     ...lines,
     "",
-    `Record: **${wins}W** in last ${results.length}. Want win chances for their next match? Ask for premium analysis (0.01 USDC).`,
+    `Record: **${wins}W** in last ${results.length}. Unlock match intelligence from ${MIN_PREMIUM_USDC} USDC for their next fixture.`,
   ].join("\n");
 }
 
@@ -420,7 +432,7 @@ export function formatSwapNotSupportedReply(wallet?: {
   return [
     `${ninjaGreeting()} I wish I could swap for you — but **GOALIQ doesn't do token swaps**, ninja.`,
     "",
-    "This app only uses your wallet for **0.01 USDC** premium insights (win chances, H2H). No DEX built in.",
+    `This app only uses your wallet for **pay-per-insight** intelligence (from ${MIN_PREMIUM_USDC} USDC). No DEX built in.`,
     "",
     wallet ? `**Your balance:** ${inj} INJ · ${usdc} USDC — plenty for gas and premium queries!` : "",
     "",
@@ -569,7 +581,7 @@ export function buildCopilotResponse(
 
     case "h2h":
     case "premium":
-      return `${ctx}\n\nPremium **Head-to-Head** and **Tactical Analysis** are gated via **x402** (0.01 testnet USDC per request).\n\n→ Click **Unlock Analysis** on the match page, or fetch:\n\`${data?.premiumUrl ?? "/api/premium/analysis"}\`\n\nUses Injective testnet USDC — no real money needed.`;
+      return `${ctx}\n\n**Match Snapshot** and **Tactical Intelligence** unlock via Injective x402 (from ${MIN_PREMIUM_USDC} USDC per insight).\n\n→ Click **Unlock intelligence** on the match page, or fetch:\n\`${data?.premiumUrl ?? "/api/x402/premium/analysis"}\`\n\nUses Injective testnet USDC — no real money needed.`;
 
     case "fund":
       return `To fund your GOALIQ wallet with testnet USDC:\n\n1. Get testnet USDC from [Circle Faucet](https://faucet.circle.com) (select **Injective Testnet**)\n2. Or bridge via **CCTP** from Sepolia → Injective Testnet\n3. Visit the **Fund Wallet** page in the app\n\nDocs: https://docs.injective.network/developers-defi/usdc-cctp-tutorial`;
@@ -578,7 +590,7 @@ export function buildCopilotResponse(
       return formatSwapNotSupportedReply();
 
     case "x402":
-      return `**x402** lets you pay per API call with testnet USDC — no API keys or subscriptions.\n\nGOALIQ premium endpoints:\n• \`GET /premium/h2h?team1=&team2=\` — 0.01 USDC\n• \`GET /premium/analysis?matchId=\` — 0.01 USDC\n\nServer runs on port 3001. Connect Keplr to Injective Testnet.`;
+      return `**x402** lets you pay per insight with testnet USDC — no subscriptions.\n\nGOALIQ endpoints:\n• Match Snapshot (H2H) — ${PRICING.insight.usdc} USDC\n• Tactical Intelligence — ${PRICING.report.usdc} USDC\n\nConnect Keplr on Injective Testnet.`;
 
     case "help":
       return `${ninjaGreeting()} I'm **GOALIQ AI** — your World Cup intelligence copilot.\n\nTry asking me:\n• "What matches are today?"\n• "When is the next match?"\n• "So did Egypt lose?"\n• "Win chances for Switzerland"\n• "How do I fund my wallet?"\n\nI've got live data, friendly banter, and premium insights when you need the deep stuff.`;

@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { connectKeplr, fetchInjBalance, fetchUsdcBalance, KeplrNotInstalledError, restoreKeplrSession } from "@/lib/keplr";
+import { connectKeplr, fetchInjBalance, fetchUsdcBalance, KeplrNotInstalledError } from "@/lib/keplr";
 import { getDefaultNetwork, type InjectiveNetwork } from "@/lib/injective-chain";
 
 interface WalletState {
@@ -64,7 +64,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setChainId(session.chainId);
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ address: session.address, network: session.network })
+        JSON.stringify({
+          address: session.address,
+          evmAddress: session.evmAddress,
+          name: session.name,
+          network: session.network,
+        })
       );
       const [inj, usdc] = await Promise.all([
         fetchInjBalance(session.address, network),
@@ -95,31 +100,37 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  // Restore session silently — never auto-open Keplr popup on page load
+  // Restore session from localStorage only — never call Keplr on page load (avoids popup)
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored || !window.keplr) return;
+    if (!stored) return;
 
-    restoreKeplrSession(network)
-      .then(async (session) => {
-        if (!session) {
-          localStorage.removeItem(STORAGE_KEY);
-          return;
-        }
-        setAddress(session.address);
-        setEvmAddress(session.evmAddress);
-        setName(session.name);
-        setChainId(session.chainId);
-        const [inj, usdc] = await Promise.all([
-          fetchInjBalance(session.address, network),
-          fetchUsdcBalance(session.evmAddress, network),
-        ]);
-        setInjBalance(inj);
-        setUsdcBalance(usdc);
-      })
-      .catch(() => {
-        localStorage.removeItem(STORAGE_KEY);
-      });
+    try {
+      const parsed = JSON.parse(stored) as {
+        address?: string;
+        evmAddress?: string;
+        name?: string;
+        network?: InjectiveNetwork;
+      };
+      if (parsed.network && parsed.network !== network) return;
+      if (!parsed.address || !parsed.evmAddress) return;
+
+      setAddress(parsed.address);
+      setEvmAddress(parsed.evmAddress);
+      setName(parsed.name ?? null);
+
+      Promise.all([
+        fetchInjBalance(parsed.address, network),
+        fetchUsdcBalance(parsed.evmAddress, network),
+      ])
+        .then(([inj, usdc]) => {
+          setInjBalance(inj);
+          setUsdcBalance(usdc);
+        })
+        .catch(() => {});
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

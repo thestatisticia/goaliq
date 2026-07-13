@@ -29,7 +29,7 @@ export function PredictionHistory() {
   if (receipts.length === 0) {
     return (
       <div className="rounded-xl border border-goaliq-borderSubtle bg-goaliq-card p-4 text-sm text-goaliq-muted">
-        No premium predictions yet — unlock analysis on a match page to get a verified Injective receipt.
+        No intelligence unlocks yet — ask the copilot or unlock on a match page to get a verified Injective receipt.
       </div>
     );
   }

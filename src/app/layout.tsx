@@ -22,9 +22,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "GOALIQ — World Cup Intelligence",
+  title: "GOALIQ — Football Intelligence, On Demand",
   description:
-    "Live World Cup 2026 scores, AI match insights, and Injective micropayments. Built for the Injective Global Cup hackathon.",
+    "AI-powered football intelligence for the FIFA World Cup. Live data is free. Premium insights unlock instantly with Injective x402 micropayments.",
 };
 
 const themeScript = `(function(){try{var t=localStorage.getItem('goaliq-theme');document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t==='light'?'light':'dark');}catch(e){document.documentElement.classList.add('dark');}})();`;

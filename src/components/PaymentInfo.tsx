@@ -26,9 +26,9 @@ export function PaymentInfo() {
 
   return (
     <div className="rounded-lg border border-goaliq-gold/30 bg-goaliq-gold/5 px-3 py-2 text-[11px] text-gray-300">
-      Premium unlocks use <span className="text-goaliq-accent font-medium">Injective x402</span> — HTTP 402 quote,
-      Keplr USDC payment, verified on-chain. From{" "}
-      <span className="text-goaliq-gold font-medium">{MIN_PREMIUM_USDC} USDC</span> per insight.
+      Pay only for the intelligence you consume — Injective x402 micropayments from{" "}
+      <span className="text-goaliq-gold font-medium">{MIN_PREMIUM_USDC} USDC</span> per unlock. One question. One
+      payment. One answer.
     </div>
   );
 }

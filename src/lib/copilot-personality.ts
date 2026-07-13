@@ -1,5 +1,7 @@
 /** Friendly GOALIQ AI voice — always address the user as "ninja". */
 
+import { MIN_PREMIUM_USDC } from "./payments";
+
 export function ninjaGreeting(): string {
   const options = ["Hey ninja!", "Hello ninja!", "Yo ninja!", "What's up ninja!"];
   return options[Math.floor(Math.random() * options.length)];
@@ -14,7 +16,9 @@ export function formatGreetingReply(): string {
   return [
     `${ninjaGreeting()} Great to see you here.`,
     "",
-    "I'm **GOALIQ AI** — your World Cup intelligence copilot. Ask me about **today's matches**, **live scores**, who's **in or out**, or **win chances** (premium, 0.01 USDC).",
+    "I'm **GOALIQ AI** — your World Cup intelligence copilot. Ask me about **today's matches**, **live coverage**, who's **in or out**, or unlock **match intelligence** (from " +
+    MIN_PREMIUM_USDC +
+    " USDC).",
     "",
     "Try: *\"What World Cup matches are today?\"* or *\"So did Egypt lose?\"*",
   ].join("\n");

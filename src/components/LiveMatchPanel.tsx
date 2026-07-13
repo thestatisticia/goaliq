@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Match, MatchEvent, TeamMatchStatistics } from "@/lib/types";
+import type { Match, MatchEvent, SummaryRow, TeamMatchStatistics } from "@/lib/types";
 import { MatchCard } from "./MatchCard";
-import { MatchEventsList, MatchStatisticsGrid } from "./MatchStatsPanel";
+import { MatchEventsList, MatchStatisticsGrid, MatchSummaryGrid } from "./MatchStatsPanel";
 import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { cn, isLive, isPenaltyShootout, hasPenaltyScore, formatMatchScore } from "@/lib/utils";
 
@@ -12,7 +12,10 @@ interface MatchDetailResponse {
   match?: Match;
   events?: MatchEvent[];
   statistics?: TeamMatchStatistics[];
+  summary?: SummaryRow[];
   statsAvailable?: boolean;
+  summaryAvailable?: boolean;
+  derivedEvents?: boolean;
   error?: string;
 }
 
@@ -70,6 +73,9 @@ export function LiveMatchPanel({ match: initialMatch }: { match: Match }) {
   const halfTime = displayMatch.goals?.halfTime;
   const events = detail?.events ?? [];
   const statistics = detail?.statistics ?? [];
+  const summary = detail?.summary ?? [];
+  const derivedEvents = detail?.derivedEvents ?? false;
+  const hasBroadcastStats = statistics.length > 0;
   const scoreLines = formatMatchScore(displayMatch);
 
   return (
@@ -116,11 +122,21 @@ export function LiveMatchPanel({ match: initialMatch }: { match: Match }) {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-lg bg-black/20 p-3">
                     <h3 className="text-xs font-semibold text-goaliq-gold mb-2 uppercase">Match Events</h3>
-                    <MatchEventsList events={events} />
+                    <MatchEventsList events={events} derived={derivedEvents} />
                   </div>
                   <div className="rounded-lg bg-black/20 p-3">
-                    <h3 className="text-xs font-semibold text-goaliq-gold mb-2 uppercase">Statistics</h3>
-                    <MatchStatisticsGrid statistics={statistics} />
+                    <h3 className="text-xs font-semibold text-goaliq-gold mb-2 uppercase">
+                      {hasBroadcastStats ? "Statistics" : "Match summary"}
+                    </h3>
+                    {hasBroadcastStats ? (
+                      <MatchStatisticsGrid statistics={statistics} />
+                    ) : (
+                      <MatchSummaryGrid
+                        summary={summary}
+                        homeName={displayMatch.teams.home.name}
+                        awayName={displayMatch.teams.away.name}
+                      />
+                    )}
                   </div>
                 </div>
               </>

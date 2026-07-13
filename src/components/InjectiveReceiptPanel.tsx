@@ -50,8 +50,7 @@ export function InjectiveReceiptPanel() {
             <h2 className="font-semibold text-goaliq-fg">Injective on-chain portfolio</h2>
           </div>
           <p className="text-xs text-goaliq-muted max-w-md">
-            Premium unlocks settle as USDC on Injective testnet via the{" "}
-            <span className="text-goaliq-accent">x402</span> pay-per-request flow.
+            Premium intelligence unlocks settle as USDC on Injective testnet — pay per insight, verified on-chain.
           </p>
         </div>
         <a
@@ -97,7 +96,7 @@ export function InjectiveReceiptPanel() {
 
           {receipts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-goaliq-borderSubtle bg-goaliq-surface/40 p-4 text-sm text-goaliq-muted">
-              No premium unlocks yet. Ask the copilot for win chances or unlock analysis on a match page —
+              No unlocks yet. Ask for match intelligence in the copilot or unlock on a match page —
               each payment gets a verified Injective receipt.
               <Link href="/fund" className="ml-1 text-goaliq-accent hover:underline">
                 Fund wallet →

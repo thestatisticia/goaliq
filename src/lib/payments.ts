@@ -1,5 +1,11 @@
 import { INJECTIVE_TESTNET, X402_PREMIUM_PRICE } from "./constants";
-import { isSingleMatchAnalysisQuery, isUpcomingAnalysisQuery, isTournamentForecastQuery } from "./copilot";
+import {
+  isSingleMatchAnalysisQuery,
+  isUpcomingAnalysisQuery,
+  isTournamentForecastQuery,
+  isHeadToHeadQuery,
+  isTeamFormQuery,
+} from "./copilot";
 
 export const PREMIUM_USDC = 0.01;
 export const PREMIUM_USDC_RAW = X402_PREMIUM_PRICE; // 10000 = 0.01 USDC (6 decimals)
@@ -17,19 +23,19 @@ export interface PricingTier {
 export const PRICING: Record<PricingTierId, PricingTier> = {
   insight: {
     id: "insight",
-    label: "Quick Insight",
+    label: "Match Snapshot",
     usdc: 0.02,
-    blurb: "Win chances, single-match preview, head-to-head snapshot",
+    blurb: "Win chances, team form, and match preview",
   },
   report: {
     id: "report",
-    label: "Deep Report",
+    label: "Tactical Intelligence",
     usdc: 0.05,
-    blurb: "Full tactical analysis, strengths/weaknesses, H2H history",
+    blurb: "Full tactical breakdown, strengths/weaknesses, deep H2H",
   },
   forecast: {
     id: "forecast",
-    label: "Tournament Forecast",
+    label: "AI World Cup Forecast",
     usdc: 0.1,
     blurb: "Who-wins-it-all projection and multi-match knockout outlook",
   },
@@ -48,12 +54,13 @@ export function getTierForQuery(message: string): PricingTier {
     return PRICING.forecast;
   }
   if (
-    /head[\s-]?to[\s-]?head|h2h|tactical|deep\s+analysis|full\s+report|weakness|strength|how\s+could\s+this\s+match\s+unfold|what\s+should\s+each\s+team/i.test(
+    /tactical|deep\s+analysis|full\s+report|weakness|strength|how\s+could\s+this\s+match\s+unfold|what\s+should\s+each\s+team/i.test(
       message
     )
   ) {
     return PRICING.report;
   }
+  // Form + win chances + match preview → Match Snapshot
   return PRICING.insight;
 }
 
@@ -74,8 +81,14 @@ export function getPaymentExplorerUrl(txHash: string): string {
 
 /** Queries that cost USDC */
 export function isPremiumQuery(message: string): boolean {
+  // Free: basic head-to-head meetings / scheduled fixture only (no form, no win %)
+  if (isHeadToHeadQuery(message)) return false;
+
   // Free: bulk previews for upcoming fixtures
   if (isUpcomingAnalysisQuery(message)) return false;
+
+  // Premium: team form
+  if (isTeamFormQuery(message)) return true;
 
   // Premium: tournament-winner forecast
   if (isTournamentForecastQuery(message)) return true;
@@ -83,7 +96,7 @@ export function isPremiumQuery(message: string): boolean {
   // Premium: analyze / preview one specific matchup
   if (isSingleMatchAnalysisQuery(message)) return true;
 
-  return /head[\s-]?to[\s-]?head|h2h|tactical|deep analysis|premium insight|unlock analysis|chances?\s+of|win\s+(chance|chances|probability|odds)|who\s+will\s+win|predict|match\s+preview|preview\s+of|against\s+\w|versus\s+\w|'s\s+(win|match|chance)/i.test(
+  return /tactical|deep analysis|premium insight|unlock analysis|chances?\s+of|win\s+(chance|chances|probability|odds)|who\s+will\s+win|predict|match\s+preview|preview\s+of|against\s+\w|versus\s+\w|'s\s+(win|match|chance)/i.test(
     message
   );
 }

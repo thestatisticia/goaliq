@@ -13,8 +13,11 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       match: detail.match,
       events: detail.events,
       statistics: detail.statistics,
+      summary: detail.summary,
       referee: detail.referee,
       statsAvailable: detail.statsAvailable,
+      summaryAvailable: detail.summaryAvailable,
+      derivedEvents: detail.derivedEvents ?? false,
       source: detail.source,
     });
   } catch (e) {

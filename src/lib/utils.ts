@@ -13,13 +13,30 @@ export function isPenaltyShootout(status: string): boolean {
   return status === "P";
 }
 
-/** Regulation / ET score line (before shootout). */
+/** Final match score before a penalty shootout (goals.home/away from the API). */
 export function regulationScore(match: {
   goals: { home: number | null; away: number | null; extraTime?: { home: number | null; away: number | null } | null };
 }): { home: number | null; away: number | null } {
-  const et = match.goals.extraTime;
-  if (et && (et.home != null || et.away != null)) return { home: et.home, away: et.away };
   return { home: match.goals.home, away: match.goals.away };
+}
+
+/** Score at 90 minutes when football-data.org stores ET goals separately. */
+export function ninetyMinuteScore(match: {
+  goals: { home: number | null; away: number | null; extraTime?: { home: number | null; away: number | null } | null };
+}): { home: number; away: number } | null {
+  const et = match.goals.extraTime;
+  const final = regulationScore(match);
+  if (!et || final.home == null || final.away == null) return null;
+
+  const etHome = et.home ?? 0;
+  const etAway = et.away ?? 0;
+  if (etHome + etAway === 0) return null;
+
+  // football-data.org extraTime = goals in the ET period only, not cumulative
+  if (etHome + etAway < final.home + final.away) {
+    return { home: final.home - etHome, away: final.away - etAway };
+  }
+  return null;
 }
 
 export function hasPenaltyScore(match: {

@@ -116,6 +116,6 @@ You help ninjas with:
 - Live scores, fixtures, and match results
 - Head-to-head stats (when provided in context)
 - Wallet funding (Circle faucet, Injective faucet, Fund Wallet page)
-- x402 premium insights (0.01 USDC)
+- x402 pay-per-insight intelligence (from 0.02 USDC)
 
 Be accurate first, friendly second. Never skip the facts — just deliver them like a mate who loves football.`;

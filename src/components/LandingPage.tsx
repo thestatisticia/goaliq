@@ -26,15 +26,15 @@ export function LandingPage() {
             </div>
 
             <h1 className="mb-5 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-              The smartest way to follow the{" "}
+              Football Intelligence,{" "}
               <span className="bg-gradient-to-r from-goaliq-accent to-goaliq-gold bg-clip-text text-transparent">
-                FIFA World Cup
+                On Demand.
               </span>
             </h1>
 
             <p className="mb-8 max-w-lg text-lg leading-relaxed text-goaliq-muted">
-              Live scores, an AI copilot that speaks football, and premium match insights unlocked instantly with{" "}
-              <span className="text-goaliq-fg">Injective USDC</span> — no subscription.
+              Live World Cup coverage for everyone. Premium AI insights unlocked instantly through{" "}
+              <span className="text-goaliq-fg">Injective micropayments</span> — no subscription.
             </p>
 
             <div className="flex flex-wrap gap-3">
@@ -48,7 +48,7 @@ export function LandingPage() {
                 href="/copilot"
                 className="inline-flex items-center gap-2 rounded-xl border border-goaliq-borderSubtle bg-goaliq-card px-7 py-3.5 font-medium transition-colors hover:border-goaliq-accent/30"
               >
-                Try AI Copilot <Bot className="h-4 w-4" />
+                Ask GOALIQ AI <Bot className="h-4 w-4" />
               </Link>
             </div>
           </div>
@@ -67,12 +67,48 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Problem & solution */}
+      <section className="mx-auto max-w-5xl px-4 py-16 font-sans sm:px-6">
+        <div className="grid gap-12 lg:grid-cols-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-goaliq-muted">The problem</p>
+            <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight text-goaliq-fg sm:text-3xl">
+              Fans juggle apps. Subscriptions charge monthly for one answer.
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-goaliq-muted">
+              Scores in one app, stats in another, predictions behind a paywall — even when you only need a single
+              insight before kickoff.
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-goaliq-muted">Our solution</p>
+            <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight text-goaliq-fg sm:text-3xl">
+              One intelligence platform. Pay per insight.
+            </h2>
+            <ul className="mt-4 space-y-2 text-sm text-goaliq-muted">
+              <li className="flex items-start gap-2">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-goaliq-success" />
+                Live World Cup data — always free
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-goaliq-success" />
+                AI football assistant grounded in real fixtures
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-goaliq-success" />
+                Premium intelligence via Injective x402 — cents, not subscriptions
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       {/* Product preview */}
       <section className="mx-auto max-w-6xl px-4 py-20 font-sans sm:px-6">
         <div className="mb-14 max-w-xl">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-goaliq-muted">The platform</p>
           <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-goaliq-fg sm:text-4xl">
-            Three surfaces. One tournament hub.
+            Free coverage. Premium intelligence on demand.
           </h2>
         </div>
         <div className="grid gap-8 lg:grid-cols-3">
@@ -91,7 +127,7 @@ export function LandingPage() {
           <ProductPanel
             title="AI Copilot"
             href="/copilot"
-            bullets={["Today's schedule", "Team outcomes", "Win chances (premium)", "Wallet help"]}
+            bullets={["Today's schedule", "Team outcomes", "Unlock football intelligence", "Wallet help"]}
           >
             <div className="space-y-2 text-sm">
               <MockChat role="user" text="What matches are today?" />
@@ -100,14 +136,14 @@ export function LandingPage() {
                 text="France vs Morocco kicks off at 20:00 UTC — full list on the dashboard."
               />
               <MockChat role="user" text="Win chances for Switzerland?" />
-              <MockChat role="assistant" text={`Quick Insight · ${PRICING.insight.usdc} USDC via Keplr`} muted />
+              <MockChat role="assistant" text={`Match Snapshot · ${PRICING.insight.usdc} USDC via Keplr`} muted />
             </div>
           </ProductPanel>
 
           <ProductPanel
-            title="Premium reports"
+            title="Premium intelligence"
             href="/copilot"
-            bullets={["Win probability", "Team form", "Head-to-head", "On-chain unlock"]}
+            bullets={["Win probability", "Tactical breakdown", "Head-to-head", "Instant x402 unlock"]}
           >
             <PremiumPreview />
           </ProductPanel>
@@ -118,19 +154,19 @@ export function LandingPage() {
       <section className="border-t border-goaliq-borderSubtle bg-goaliq-surface/30 py-20 font-sans">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <div className="mb-12 max-w-lg">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-goaliq-muted">Micropayments</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-goaliq-muted">Pay per insight</p>
             <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-goaliq-fg">
-              Pay only for depth
+              One question. One payment. One answer.
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-goaliq-muted">
-              Browse free. Unlock insights with Injective testnet USDC when you need them.
+              Instead of subscriptions, GOALIQ charges only for the intelligence you consume — powered by Injective x402.
             </p>
           </div>
           <ol className="grid gap-0 sm:grid-cols-4">
-            <FlowStep step={1} title="Ask" desc="Request win chances or H2H" />
-            <FlowStep step={2} title="Detect" desc="GOALIQ picks the right tier" />
+            <FlowStep step={1} title="Ask" desc="Request match intelligence or win chances" />
+            <FlowStep step={2} title="Quote" desc="GOALIQ picks the right tier" />
             <FlowStep step={3} title="Pay" desc={`From ${MIN_PREMIUM_USDC} USDC in Keplr`} />
-            <FlowStep step={4} title="Receive" desc="Structured report instantly" last />
+            <FlowStep step={4} title="Unlock" desc="Premium intelligence instantly" last />
           </ol>
         </div>
       </section>
@@ -141,17 +177,18 @@ export function LandingPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-goaliq-muted">Why GOALIQ</p>
             <h2 className="mt-3 font-display text-3xl font-semibold leading-snug tracking-tight text-goaliq-fg sm:text-4xl">
-              Football intelligence without the noise
+              Smarter football starts here
             </h2>
             <p className="mt-4 text-base leading-relaxed text-goaliq-muted">
-              Built for fans who want real scores, straight answers, and optional AI depth — not another generic chatbot skin.
+              GOALIQ helps fans understand the tournament — not just watch it. Real data, conversational AI, and
+              on-demand intelligence unlocked through Injective.
             </p>
           </div>
           <ul className="divide-y divide-goaliq-borderSubtle border-t border-goaliq-borderSubtle">
-            <WhyRow title="Real-time scores" desc="Live, today, upcoming, and full tournament results from football-data.org." />
-            <WhyRow title="Grounded AI copilot" desc="Answers tied to live fixture data — schedules, outcomes, and bracket state." />
-            <WhyRow title="Pay per insight" desc="No accounts or subscriptions. Unlock only the analysis you need." />
-            <WhyRow title="On Injective" desc="Keplr wallet, testnet USDC, and verified micropayments on-chain." />
+            <WhyRow title="Free live coverage" desc="Scores, fixtures, bracket, and results from football-data.org." />
+            <WhyRow title="Grounded AI copilot" desc="Answers tied to live fixture data — schedules, outcomes, bracket state." />
+            <WhyRow title="Pay per insight" desc="No accounts or subscriptions. Unlock only the intelligence you need." />
+            <WhyRow title="Injective x402" desc="Enables a new model: ask once, pay cents, get verified on-chain receipts." />
           </ul>
         </div>
       </section>
@@ -166,14 +203,14 @@ export function LandingPage() {
             items={["Live scores & fixtures", "Results & knockout", "AI chat for schedules", "Wallet & funding guides"]}
           />
           <PricingCard
-            title="Premium"
+            title="Premium intelligence"
             price={`from ${MIN_PREMIUM_USDC} USDC`}
             highlight
             items={[
-              `Quick Insight · ${PRICING.insight.usdc} USDC`,
-              `Deep Report · ${PRICING.report.usdc} USDC`,
-              `Tournament Forecast · ${PRICING.forecast.usdc} USDC`,
-              "Keplr on-chain payment",
+              `Match Snapshot · ${PRICING.insight.usdc} USDC`,
+              `Tactical Intelligence · ${PRICING.report.usdc} USDC`,
+              `AI World Cup Forecast · ${PRICING.forecast.usdc} USDC`,
+              "Instant Injective x402 unlock",
             ]}
           />
         </div>
@@ -200,10 +237,10 @@ export function LandingPage() {
       <section className="mx-auto max-w-3xl px-4 py-20 font-sans sm:px-6">
         <div className="rounded-2xl border border-goaliq-borderSubtle bg-goaliq-card px-6 py-12 text-center sm:px-10">
           <h2 className="font-display text-3xl font-semibold tracking-tight text-goaliq-fg sm:text-4xl">
-            Follow the World Cup with clarity
+            Every match. Every insight. Instantly.
           </h2>
           <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-goaliq-muted">
-            Live matches, grounded AI, and premium insights when you want them.
+            Live football data stays free. Premium AI intelligence unlocks when it matters — powered by Injective x402.
           </p>
           <Link
             href="/dashboard"
@@ -220,7 +257,7 @@ export function LandingPage() {
 function PremiumPreview() {
   return (
     <div className="rounded-lg border border-goaliq-border bg-goaliq-surface/80 p-3 text-xs">
-      <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-goaliq-gold">Example insight</p>
+      <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-goaliq-gold">Match intelligence</p>
       <p className="mb-3 text-sm font-medium text-goaliq-fg">France vs Morocco</p>
       <div className="space-y-2 text-goaliq-muted">
         <div className="flex justify-between">

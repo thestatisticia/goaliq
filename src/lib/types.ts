@@ -39,13 +39,22 @@ export interface TeamMatchStatistics {
   statistics: MatchStatistic[];
 }
 
+export interface SummaryRow {
+  label: string;
+  home: string;
+  away: string;
+}
+
 export interface MatchDetail {
   match: Match;
   events: MatchEvent[];
   statistics: TeamMatchStatistics[];
+  summary: SummaryRow[];
   referee?: string | null;
   source: "football-data" | "api-football" | "mixed";
   statsAvailable: boolean;
+  summaryAvailable: boolean;
+  derivedEvents?: boolean;
 }
 
 export interface StandingRow {
@@ -54,6 +63,8 @@ export interface StandingRow {
   points: number;
   all: { played: number; win: number; draw: number; lose: number };
   goalsDiff: number;
+  goalsFor?: number;
+  goalsAgainst?: number;
   form: string | null;
 }
 

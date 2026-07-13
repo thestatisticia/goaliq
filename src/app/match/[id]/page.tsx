@@ -5,12 +5,12 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import type { Match, MatchEvent, TeamMatchStatistics } from "@/lib/types";
+import type { Match, MatchEvent, SummaryRow, TeamMatchStatistics } from "@/lib/types";
 import { isLive, formatMatchTime, decidedOnPenalties, hasPenaltyScore, isPenaltyShootout, formatMatchScore, regulationScore, cn } from "@/lib/utils";
 import { MatchBriefing } from "@/components/MatchBriefing";
 import { PremiumUnlock } from "@/components/PremiumUnlock";
 import { AskCopilotCard } from "@/components/AskCopilotCard";
-import { MatchEventsList, MatchStatisticsGrid } from "@/components/MatchStatsPanel";
+import { MatchEventsList, MatchStatisticsGrid, MatchSummaryGrid } from "@/components/MatchStatsPanel";
 
 export default function MatchPage() {
   const params = useParams();
@@ -18,6 +18,8 @@ export default function MatchPage() {
   const [match, setMatch] = useState<Match | null>(null);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [statistics, setStatistics] = useState<TeamMatchStatistics[]>([]);
+  const [summary, setSummary] = useState<SummaryRow[]>([]);
+  const [derivedEvents, setDerivedEvents] = useState(false);
   const [referee, setReferee] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +30,8 @@ export default function MatchPage() {
         setMatch(data.match);
         setEvents(data.events ?? []);
         setStatistics(data.statistics ?? []);
+        setSummary(data.summary ?? []);
+        setDerivedEvents(data.derivedEvents ?? false);
         setReferee(data.referee ?? null);
       })
       .finally(() => setLoading(false));
@@ -44,6 +48,8 @@ export default function MatchPage() {
           setMatch(data.match);
           setEvents(data.events ?? []);
           setStatistics(data.statistics ?? []);
+          setSummary(data.summary ?? []);
+          setDerivedEvents(data.derivedEvents ?? false);
         });
     }, ms);
     return () => clearInterval(interval);
@@ -69,6 +75,7 @@ export default function MatchPage() {
   const pens = match.goals?.penalties;
   const scores = formatMatchScore(match);
   const showPenTally = (inShootout || (onPens && validPens)) && pens;
+  const hasBroadcastStats = statistics.length > 0;
   const context = {
     matchId: match.fixture.id,
     homeTeam: match.teams.home.name,
@@ -143,11 +150,19 @@ export default function MatchPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-goaliq-border bg-goaliq-card p-5">
           <h2 className="font-semibold mb-3">Match Events</h2>
-          <MatchEventsList events={events} />
+          <MatchEventsList events={events} derived={derivedEvents} />
         </div>
         <div className="rounded-xl border border-goaliq-border bg-goaliq-card p-5">
-          <h2 className="font-semibold mb-3">Statistics</h2>
-          <MatchStatisticsGrid statistics={statistics} />
+          <h2 className="font-semibold mb-3">{hasBroadcastStats ? "Statistics" : "Match summary"}</h2>
+          {hasBroadcastStats ? (
+            <MatchStatisticsGrid statistics={statistics} />
+          ) : (
+            <MatchSummaryGrid
+              summary={summary}
+              homeName={match.teams.home.name}
+              awayName={match.teams.away.name}
+            />
+          )}
         </div>
       </div>
 

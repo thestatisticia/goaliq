@@ -43,11 +43,12 @@ import {
   formatTeamFormReply,
   formatStandingsForLLM,
   ninjaGreeting,
+  isHeadToHeadQuery,
 } from "@/lib/copilot";
 import { answerKnowledgeQuery, isKnowledgeQuery } from "@/lib/copilot-knowledge";
 import { resolveHeadToHead, findTeamMentionedInMessage, resolveTeamsFromMessage } from "@/lib/team-resolver";
 import { buildPremiumMatchReport, buildPremiumReportForTeams, buildFreeUpcomingAnalysis, buildTournamentForecast } from "@/lib/match-analysis";
-import { isPremiumQuery, getTierForQuery } from "@/lib/payments";
+import { isPremiumQuery, getTierForQuery, PRICING } from "@/lib/payments";
 import type { CopilotContext } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -363,8 +364,22 @@ export async function POST(request: Request) {
     }
   }
 
-  // Team form (last N matches)
+  // Team form (last N matches) — premium Match Snapshot
   if (isTeamFormQuery(message)) {
+    const tier = getTierForQuery(message);
+    if (!txHash) {
+      return NextResponse.json({
+        reply: [
+          `${ninjaGreeting()} Team form is a **${tier.label}** — **${tier.usdc} USDC** on Injective testnet.`,
+          `_${tier.blurb}._`,
+          "",
+          "Connect Keplr and ask again — I'll unlock recent World Cup results and form.",
+        ].join("\n"),
+        model: "payment-required",
+        provider: "payment",
+        intent: "payment",
+      });
+    }
     try {
       const team = await findTeamMentionedInMessage(message);
       if (team) {
@@ -395,7 +410,7 @@ export async function POST(request: Request) {
   // Player-level stats not yet in API layer
   if (/\b(top scorer|most assists|clean sheets?|injured|yellow cards?|goalkeeper|most saves|mbapp[eé]|messi|player of the match)\b/i.test(message)) {
     return NextResponse.json({
-      reply: `${ninjaGreeting()} Player stats (top scorer, cards, injuries, lineups) aren't in GOALIQ's data layer yet, ninja — open a **match page** for events when live, or ask about **team form**, **standings**, or **win chances** (premium).`,
+      reply: `${ninjaGreeting()} Player stats (top scorer, cards, injuries, lineups) aren't in GOALIQ's data layer yet, ninja — open a **match page** for events when live, or ask about **standings**, or unlock **team form** / **win chances** (premium).`,
       model: "goaliq",
       provider: "goaliq",
       intent: "player-stats",
@@ -412,6 +427,40 @@ export async function POST(request: Request) {
         model: "goaliq",
         provider: "goaliq",
         intent: "compare",
+      });
+    }
+  }
+
+  // Head-to-head — free, structured API data (never LLM guesswork)
+  if (isHeadToHeadQuery(message)) {
+    try {
+      const h2h = await resolveHeadToHead(message);
+      if (h2h) {
+        return NextResponse.json({
+          reply: [
+            `${ninjaGreeting()} Here's **${h2h.team1.name} vs ${h2h.team2.name}** from live World Cup data:`,
+            "",
+            h2h.summary,
+            "",
+            `_Want form + win chances? Ask **"win chances for ${h2h.team1.name} vs ${h2h.team2.name}"** (${PRICING.insight.usdc} USDC)._`,
+          ].join("\n"),
+          model: "football-data",
+          provider: "football-data.org",
+          intent: "h2h",
+        });
+      }
+      return NextResponse.json({
+        reply: `${ninjaGreeting()} Name both teams clearly, ninja — e.g. **"head to head Spain vs Belgium"**.`,
+        model: "football-data",
+        provider: "football-data.org",
+        intent: "h2h",
+      });
+    } catch (e) {
+      return NextResponse.json({
+        reply: `${ninjaGreeting()} Couldn't load head-to-head data: ${(e as Error).message}`,
+        model: "error",
+        provider: "football-data.org",
+        intent: "h2h",
       });
     }
   }
@@ -664,7 +713,7 @@ export async function POST(request: Request) {
       : `${x402Base}/premium/h2h`;
 
     const reply = h2hData
-      ? `${h2hData}\n\n_Premium deep analysis available via x402 (0.01 USDC) on match pages._`
+      ? `${h2hData}\n\n_Tactical Intelligence available on match pages from ${PRICING.report.usdc} USDC via Injective x402._`
       : buildCopilotResponse(intent, message, context, {
           matches,
           standings: recentData || liveData,

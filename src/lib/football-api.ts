@@ -20,6 +20,7 @@ import {
   isFootballDataConfigured,
 } from "./football-data-client";
 import { mapFdMatch, mapFdStandings, mapFdTeam, mapFdGoalsToEvents, mapFdStatistics } from "./football-data-mapper";
+import { buildDerivedScoreEvents, buildMatchSummaryRows } from "./match-summary";
 
 export type { WorldCupTeam };
 
@@ -687,7 +688,7 @@ export async function getMatchDetail(id: number): Promise<MatchDetail | null> {
     ["LIVE", "HT", "ET", "1H", "2H"].includes(prelimStatus);
   const finished = FINISHED.has(prelimStatus);
 
-  const detailCacheKey = `match-detail-v2-${id}`;
+  const detailCacheKey = `match-detail-v3-${id}`;
   if (!livePhase) {
     const cachedDetail = getCached<MatchDetail>(detailCacheKey);
     if (cachedDetail) return cachedDetail;
@@ -732,13 +733,35 @@ export async function getMatchDetail(id: number): Promise<MatchDetail | null> {
 
   const referee = fdRaw?.referees?.[0]?.name ?? null;
 
+  const normalized = normalizeMatch(match);
+  let derivedEvents = false;
+  if (events.length === 0) {
+    const derived = buildDerivedScoreEvents(normalized);
+    if (derived.length) {
+      events = derived;
+      derivedEvents = true;
+    }
+  }
+
+  let summary: MatchDetail["summary"] = [];
+  if (statistics.length === 0) {
+    const [standings, h2h] = await Promise.all([
+      getStandings(),
+      getHeadToHead(normalized.teams.home.id, normalized.teams.away.id),
+    ]);
+    summary = buildMatchSummaryRows(normalized, standings, h2h);
+  }
+
   const detail: MatchDetail = {
-    match: normalizeMatch(match),
+    match: normalized,
     events,
     statistics,
+    summary,
     referee,
     source,
     statsAvailable: events.length > 0 || statistics.length > 0,
+    summaryAvailable: summary.length > 0,
+    derivedEvents,
   };
 
   const ttl = livePhase ? CACHE_TTL.live : finished ? CACHE_TTL.matchDetailFinished : CACHE_TTL.matchDetail;
@@ -791,15 +814,21 @@ export async function getHeadToHead(team1: number, team2: number): Promise<Match
   );
   if (direct.length > 0) return direct;
 
+  // Include scheduled fixture even when historical H2H feed is empty
+  if (fixture) return [fixture];
+
   try {
-    return await apisportsFetch<Match[]>(
+    const api = await apisportsFetch<Match[]>(
       `/fixtures/headtohead?h2h=${team1}-${team2}`,
       `h2h-${team1}-${team2}`,
       CACHE_TTL.h2h
     );
+    if (api.length > 0) return api;
   } catch {
-    return fixture ? [fixture] : [];
+    /* fall through */
   }
+
+  return [];
 }
 
 export async function getTeamWorldCupResults(teamId: number, max = 5): Promise<Match[]> {

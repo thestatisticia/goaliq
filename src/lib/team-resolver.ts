@@ -9,6 +9,7 @@ export interface TeamResult {
 }
 
 const SPLIT_PATTERNS = [
+  /(?:stats?|statistics)\s+(?:of|for|between)\s+(.+?)\s+(?:and|&)\s+(.+?)\??$/i,
   /(.+?)\s+(?:against|versus|vs\.?|v)\s+(.+?)\??$/i,
   /(?:between|of)\s+(.+?)\s+(?:and|&)\s+(.+?)\??$/i,
   /(.+?)\s+(?:and|&)\s+(.+?)\??$/i,
@@ -173,6 +174,7 @@ export async function searchTeam(query: string): Promise<TeamResult | null> {
   }
 }
 
+/** Free H2H: meetings + scheduled fixture only. Form / win % stay premium. */
 export async function resolveHeadToHead(message: string): Promise<{
   team1: TeamResult;
   team2: TeamResult;
@@ -212,10 +214,14 @@ export async function resolveHeadToHead(message: string): Promise<{
     `Meetings in API: ${matches.length}`,
     played.length
       ? `Record: ${team1.name} ${t1Wins}W, ${team2.name} ${t2Wins}W, ${draws}D (${played.length} finished)`
-      : "No finished meetings yet.",
-    upcoming.length ? `Scheduled: ${upcoming.length} upcoming match(es)` : "",
+      : upcoming.length
+        ? `No finished meetings yet — ${upcoming.length} scheduled in this World Cup.`
+        : "No finished meetings in the current data feed.",
+    upcoming.length
+      ? `Next: ${upcoming.map((m) => `${m.league.round ?? "World Cup"} · ${new Date(m.fixture.date).toLocaleString()} · ${m.teams.home.name} vs ${m.teams.away.name}`).join("; ")}`
+      : "",
     "Matches:",
-    ...(lines.length ? lines : ["- No meetings found"]),
+    ...(lines.length ? lines : ["- No meetings found in API"]),
   ]
     .filter(Boolean)
     .join("\n");

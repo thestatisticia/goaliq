@@ -1,9 +1,15 @@
 "use client";
 
-import type { MatchEvent, TeamMatchStatistics } from "@/lib/types";
+import type { MatchEvent, SummaryRow, TeamMatchStatistics } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function MatchEventsList({ events }: { events: MatchEvent[] }) {
+export function MatchEventsList({
+  events,
+  derived,
+}: {
+  events: MatchEvent[];
+  derived?: boolean;
+}) {
   if (!events.length) {
     return (
       <p className="text-sm text-gray-500 py-2">
@@ -16,9 +22,15 @@ export function MatchEventsList({ events }: { events: MatchEvent[] }) {
   const penalties = events.filter((e) => e.type === "Penalty");
   const cards = events.filter((e) => e.type === "Card");
   const subs = events.filter((e) => e.type === "subst");
+  const info = events.filter((e) => e.type === "Info");
 
   return (
     <div className="space-y-4">
+      {derived && info.length > 0 && (
+        <p className="text-xs text-gray-500 mb-2">
+          Score timeline from match data — individual scorers require API-Football.
+        </p>
+      )}
       {penalties.length > 0 && (
         <EventGroup title="Penalty shootout" events={penalties} icon="🎯" penaltyMode />
       )}
@@ -27,8 +39,8 @@ export function MatchEventsList({ events }: { events: MatchEvent[] }) {
       {subs.length > 0 && <EventGroup title="Substitutions" events={subs} icon="🔄" />}
       {goals.length === 0 && penalties.length === 0 && cards.length === 0 && subs.length === 0 && (
         <div className="space-y-2">
-          {events.map((e, i) => (
-            <EventRow key={i} event={e} />
+          {(info.length ? info : events).map((e, i) => (
+            <EventRow key={i} event={e} infoMode={e.type === "Info"} />
           ))}
         </div>
       )}
@@ -64,10 +76,12 @@ function EventGroup({
 function EventRow({
   event,
   penaltyMode,
+  infoMode,
   index,
 }: {
   event: MatchEvent;
   penaltyMode?: boolean;
+  infoMode?: boolean;
   index?: number;
 }) {
   const minute = penaltyMode
@@ -80,6 +94,16 @@ function EventRow({
   const isMissed = /missed/i.test(event.detail);
   const cardColor =
     event.detail.includes("Red") ? "text-goaliq-live" : event.detail.includes("Yellow") ? "text-yellow-400" : "";
+
+  if (infoMode) {
+    return (
+      <div className="flex items-center gap-3 text-sm">
+        <span className="text-gray-500 w-10 shrink-0 font-mono text-xs">{minute}</span>
+        <span className="font-medium text-gray-200">{event.player.name}</span>
+        <span className="text-gray-400 text-xs ml-auto tabular-nums">{event.detail}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-3 text-sm">
@@ -111,6 +135,47 @@ const KEY_STATS = [
   "Goalkeeper Saves",
   "Offsides",
 ];
+
+export function MatchSummaryGrid({
+  summary,
+  homeName,
+  awayName,
+}: {
+  summary: SummaryRow[];
+  homeName: string;
+  awayName: string;
+}) {
+  if (!summary.length) {
+    return (
+      <p className="text-sm text-gray-500 py-2">
+        Match context will appear here when standings or score data is available.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-3 text-xs text-gray-500 mb-1">
+        <span className="text-right truncate">{homeName}</span>
+        <span className="text-center">Stat</span>
+        <span className="truncate">{awayName}</span>
+      </div>
+      {summary.map((row) => (
+        <div
+          key={row.label}
+          className="grid grid-cols-3 items-center text-sm py-1 border-b border-goaliq-border/30 gap-1"
+        >
+          <span className="text-right text-gray-200 text-xs sm:text-sm">{row.home}</span>
+          <span className="text-center text-xs text-gray-500">{row.label}</span>
+          <span className="text-gray-200 text-xs sm:text-sm">{row.away}</span>
+        </div>
+      ))}
+      <p className="text-xs text-gray-600 pt-1">
+        Built from football-data.org scores and standings — possession and shots need API-Football.
+      </p>
+    </div>
+  );
+}
 
 export function MatchStatisticsGrid({ statistics }: { statistics: TeamMatchStatistics[] }) {
   if (!statistics.length) {

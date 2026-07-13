@@ -167,6 +167,8 @@ export function mapFdStandings(data: FdStandingsResponse): StandingGroup[] {
       points: row.points,
       all: { played: row.playedGames, win: row.won, draw: row.draw, lose: row.lost },
       goalsDiff: row.goalDifference,
+      goalsFor: row.goalsFor,
+      goalsAgainst: row.goalsAgainst,
       form: row.form,
     })),
   }));

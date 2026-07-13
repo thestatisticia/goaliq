@@ -54,7 +54,7 @@ export function StatsBar() {
           <Zap className="h-5 w-5 text-goaliq-fg" />
         </div>
         <div>
-          <p className="text-xs text-goaliq-muted">x402 Premium</p>
+          <p className="text-xs text-goaliq-muted">Pay per insight</p>
           <p className="font-semibold text-sm text-goaliq-fg">from 0.02 USDC / unlock</p>
           <p className="text-[10px] text-goaliq-muted">Injective testnet · balance verified</p>
         </div>

@@ -16,8 +16,8 @@ export const COPILOT_PROMPT_CHIPS: CopilotPromptChip[] = [
   { label: "🌍 Who's still in?", query: "Which teams are left in the tournament?" },
   { label: "🇳🇴 Did Norway advance?", query: "Did Norway proceed to the next round?" },
   { label: "📈 Group standings", query: "Show the group standings" },
-  { label: "🔥 Team form", query: "How has France performed recently?" },
-  { label: "🤖 Predict a match", query: "Analyze France vs Morocco", premium: true },
-  { label: "🌍 Who wins it all?", query: "Who is most likely to win the World Cup?", premium: true },
+  { label: "🔥 Team form", query: "How has France performed recently?", premium: true },
+  { label: "🤖 Match intelligence", query: "Analyze France vs Morocco", premium: true },
+  { label: "🌍 AI World Cup forecast", query: "Who is most likely to win the World Cup?", premium: true },
   { label: "📊 Compare teams", query: "Compare France and Spain" },
 ];

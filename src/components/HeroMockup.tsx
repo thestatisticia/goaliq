@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Match } from "@/lib/types";
-import { formatMatchScore, formatMatchTime } from "@/lib/utils";
+import { formatMatchScore, formatMatchTime, regulationScore, shouldShowScore } from "@/lib/utils";
 import { dashboardApiUrl } from "@/lib/dashboard-client";
 import { GoaliqWordmark } from "@/components/GoaliqWordmark";
 import { PRICING } from "@/lib/payments";
@@ -15,7 +15,8 @@ function HeroMatchRow({
   live?: boolean;
 }) {
   const scoreObj = formatMatchScore(match);
-  const score = scoreObj.suffix ? `${scoreObj.main} ${scoreObj.suffix}` : scoreObj.main;
+  const reg = regulationScore(match);
+  const showScore = shouldShowScore(match.fixture.status.short);
   const minute = live
     ? formatMatchTime(match.fixture.status.short, match.fixture.status.elapsed)
     : match.fixture.status.short === "NS"
@@ -29,9 +30,18 @@ function HeroMatchRow({
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-goaliq-fg/90">
-          {match.teams.home.name} {score} {match.teams.away.name}
+        <span className="min-w-0 flex-1 truncate text-goaliq-fg/90">{match.teams.home.name}</span>
+        <span className="shrink-0 px-1 text-center font-semibold tabular-nums text-goaliq-fg">
+          {showScore && reg.home != null && reg.away != null ? (
+            <>
+              {reg.home}–{reg.away}
+              {scoreObj.suffix ? <span className="ml-1 font-normal text-goaliq-muted">{scoreObj.suffix}</span> : null}
+            </>
+          ) : (
+            <span className="font-normal text-goaliq-muted">vs</span>
+          )}
         </span>
+        <span className="min-w-0 flex-1 truncate text-right text-goaliq-fg/90">{match.teams.away.name}</span>
         <span
           className={`shrink-0 text-[10px] ${live ? "text-goaliq-live font-semibold" : "text-goaliq-muted"}`}
         >
@@ -65,17 +75,39 @@ export function HeroMockup() {
 
         const live: Match[] = data.live ?? [];
         const results: Match[] = data.results ?? [];
-        const fixtures: Match[] = data.fixtures ?? data.upcoming ?? [];
+        const todayFixtures: Match[] = data.fixtures ?? [];
+        const upcomingPool: Match[] =
+          todayFixtures.length > 0 ? todayFixtures : (data.upcoming ?? []);
+
+        let nextFeatured: Match | null = null;
+        let nextFeaturedLive = false;
 
         if (live.length > 0) {
-          setFeatured(live[0]);
-          setFeaturedLive(true);
+          nextFeatured = live[0];
+          nextFeaturedLive = true;
         } else if (results.length > 0) {
-          setFeatured(results[0]);
-          setFeaturedLive(false);
+          nextFeatured = results[0];
         }
 
-        const next = fixtures.find((m) => m.fixture.status.short === "NS") ?? fixtures[0] ?? null;
+        const featuredId = nextFeatured?.fixture.id;
+        const next =
+          upcomingPool.find(
+            (m) =>
+              m.fixture.id !== featuredId &&
+              ["NS", "TBD"].includes(m.fixture.status.short) &&
+              m.teams.home.name !== "TBD" &&
+              m.teams.away.name !== "TBD"
+          ) ??
+          upcomingPool.find(
+            (m) =>
+              m.fixture.id !== featuredId &&
+              m.teams.home.name !== "TBD" &&
+              m.teams.away.name !== "TBD"
+          ) ??
+          null;
+
+        setFeatured(nextFeatured);
+        setFeaturedLive(nextFeaturedLive);
         setUpcoming(next);
       } catch {
         /* keep skeleton */
@@ -132,7 +164,7 @@ export function HeroMockup() {
         <div className="mt-3 rounded-lg border border-goaliq-borderSubtle bg-goaliq-surface p-3">
           <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-goaliq-muted">Copilot</p>
           <p className="text-xs text-goaliq-fg/70">
-            &quot;Win chances for {copilotTeam}?&quot; → Premium unlock
+            &quot;Win chances for {copilotTeam}?&quot; → Unlock intelligence
           </p>
         </div>
 
@@ -147,7 +179,7 @@ export function HeroMockup() {
           </div>
           <div className="rounded-lg border border-goaliq-gold/20 bg-goaliq-gold/5 py-2.5 dark:border-goaliq-gold/30 dark:bg-goaliq-gold/10">
             <p className="text-lg font-bold tabular-nums text-goaliq-gold">{PRICING.insight.usdc}</p>
-            <p className="text-[10px] text-goaliq-muted">USDC</p>
+            <p className="text-[10px] text-goaliq-muted">Per insight</p>
           </div>
         </div>
       </div>

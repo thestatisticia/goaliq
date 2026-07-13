@@ -96,7 +96,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
     }
   }
 
-  const title = type === "analysis" ? "Tactical Analysis" : "Head-to-Head History";
+  const title = type === "analysis" ? "Tactical Intelligence" : "Match Snapshot";
   const hasUsdc = usdcBalance && parseFloat(usdcBalance) >= price;
 
   return (
@@ -112,7 +112,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
       <PaymentInfo />
 
       {!isConnected && (
-        <p className="text-xs text-gray-400">Connect Keplr — x402 returns 402, you pay USDC, content unlocks.</p>
+        <p className="text-xs text-gray-400">Connect Keplr — one USDC payment unlocks instant match intelligence.</p>
       )}
 
       {isConnected && !hasUsdc && (
@@ -158,7 +158,7 @@ export function PremiumUnlock({ matchId, team1Id, team2Id, homeTeamName, awayTea
           className="w-full rounded-lg bg-goaliq-gold/20 border border-goaliq-gold/40 py-2.5 text-sm font-medium text-goaliq-gold hover:bg-goaliq-gold/30 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />}
-          {!isConnected ? "Connect & Pay via x402" : hasUsdc ? `Pay ${price} USDC (x402)` : "Need USDC"}
+          {!isConnected ? "Connect & unlock intelligence" : hasUsdc ? `Unlock · ${price} USDC` : "Need USDC"}
         </button>
       )}
 

@@ -11,6 +11,7 @@ import { getFallbackPrediction, findFallbackFixture } from "./prediction-fallbac
 import { resolveTeamsFromMessage, searchTeam } from "./team-resolver";
 import { getKnockoutRoundOrder, getKnockoutWinner, isTbdTeamName } from "./knockout-bracket";
 import type { Match, Team } from "./types";
+import { PRICING } from "./payments";
 
 const FINISHED = new Set(["FT", "AET", "PEN"]);
 
@@ -93,7 +94,7 @@ function buildReportFromPrediction(
   const team2Win = homeIsTeam1 ? pred.percent.away : pred.percent.home;
 
   const lines = [
-    `# ${team1.name} vs ${team2.name} — Premium Preview`,
+    `# ${team1.name} vs ${team2.name} — Match Intelligence`,
     fixture
       ? `${fixture.league.round ?? "World Cup"} · ${new Date(fixture.fixture.date).toLocaleString()} · ${fixture.fixture.status.long}`
       : "Upcoming World Cup fixture",
@@ -170,7 +171,7 @@ export async function buildPremiumReportForTeams(
   ]);
 
   const report = [
-    `# ${team1.name} vs ${team2.name} — Premium Preview`,
+    `# ${team1.name} vs ${team2.name} — Match Intelligence`,
     "",
     "_Win probability model unavailable for this fixture. Showing available World Cup form._",
     "",
@@ -264,7 +265,7 @@ export async function buildFreeUpcomingAnalysis(limit = 4): Promise<string> {
   }
 
   sections.push(
-    "_Want win % and head-to-head? Ask **\"win chances for France vs Morocco\"** (0.01 USDC) or unlock on the match page._"
+    `_Want win % and head-to-head? Unlock match intelligence from ${PRICING.insight.usdc} USDC — ask in copilot or on the match page._`
   );
 
   return sections.join("\n");

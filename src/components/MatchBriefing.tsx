@@ -1,5 +1,6 @@
 "use client";
 
+import { MIN_PREMIUM_USDC } from "@/lib/payments";
 import { useState } from "react";
 import { FileText, Loader2, Sparkles } from "lucide-react";
 import type { MatchBriefingData } from "@/lib/match-briefing";
@@ -107,7 +108,7 @@ export function MatchBriefing({ matchId }: { matchId: number }) {
           )}
 
           <p className="text-[10px] text-goaliq-muted">
-            Unlock premium below for full H2H + tactical report (0.01 USDC).
+            Unlock intelligence below — Match Snapshot or Tactical Intelligence from {MIN_PREMIUM_USDC} USDC.
           </p>
         </div>
       )}

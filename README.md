@@ -1,110 +1,112 @@
 # GOALIQ
 
-**World Cup 2026 live scores + AI intelligence. Free to browse. Pay 0.01 USDC on Injective when you want deeper match insights.**
+**Football Intelligence. Powered by AI. Paid Per Insight.**
+
+> GOALIQ is an AI-native football intelligence platform that replaces sports subscriptions with instant, pay-per-insight analysis powered by Injective x402 micropayments.
 
 Built for the **Injective Global Cup** hackathon.
 
 ---
 
-## What is GOALIQ?
+## Elevator pitch
 
-GOALIQ is a football intelligence platform with two parts:
+Football fans shouldn't have to pay monthly subscriptions just to access advanced match insights.
 
-1. **Dashboard** — live scores, today's matches, results, knockout bracket, and all 48 World Cup teams.
-2. **GOALIQ AI** — an AI copilot that answers questions like *"What matches are today?"* or *"Did Egypt lose?"*
-
-Most of the app is **free**. Users only pay when they want **premium analysis** — win chances, team form, and head-to-head stats.
+GOALIQ combines live World Cup data with an AI copilot and introduces a **pay-per-insight** model powered by Injective x402. Instead of subscribing, fans pay only a few cents in USDC when they want premium intelligence — win probabilities, tactical breakdowns, or tournament forecasts.
 
 ---
 
-## How the app works (user flow)
+## The problem
 
-```
-1. Open the app → see live World Cup scores on the Dashboard
-2. Go to AI Copilot → ask football questions in plain English
-3. For deep stats → connect Keplr wallet → pay 0.01 USDC → get the report
-```
+Football fans constantly switch between multiple platforms:
+
+- one for scores
+- another for statistics
+- another for predictions
+- another for AI
+
+Premium insights are usually hidden behind expensive monthly subscriptions — even if you only need one answer.
+
+## Our solution
+
+GOALIQ brings everything together:
+
+- **Live World Cup data** — free for everyone
+- **AI football assistant** — grounded in real fixture data
+- **Premium match intelligence** — unlock on demand
+- **Pay only when you need depth** — no accounts, no subscriptions
+
+---
+
+## What is GOALIQ?
+
+GOALIQ is an **AI-native football intelligence platform** that helps fans understand the World Cup — not just watch it.
+
+It combines real-time match data with conversational AI and on-demand premium analysis powered by **Injective x402 micropayments**. Live coverage stays free; advanced intelligence unlocks instantly when fans need it.
 
 ### Pages
 
 | Page | What it does |
 |------|----------------|
-| `/dashboard` | Live, Today, Results, History, Knockout, Teams |
-| `/copilot` | AI chat — scores, schedules, win chances |
-| `/match/[id]` | Single match score, events, stats |
-| `/fund` | How to get free testnet INJ + USDC |
+| `/dashboard` | Live matches, bracket, teams, **Injective receipt panel** |
+| `/copilot` | AI football assistant — free chat + premium intelligence via x402 |
+| `/match/[id]` | Match context, events, **match summary** (free), **unlock intelligence** (paid) |
+| `/fund` | Get testnet INJ + USDC for micropayments |
 
-### What's free vs paid
+### Intelligence tiers
 
-| Free | Paid (0.01 USDC) |
-|------|------------------|
-| Live scores | Win probability % |
-| Today's schedule | Team form & ratings |
-| Results & history | Head-to-head analysis |
-| General AI chat | Premium prediction reports |
+| Tier | Price | What unlocks |
+|------|-------|----------------|
+| **Match Snapshot** | 0.02 USDC | Win chances, team form, match preview |
+| **Tactical Intelligence** | 0.05 USDC | Full match breakdown on `/match/[id]` |
+| **AI World Cup Forecast** | 0.10 USDC | Tournament-winner and knockout outlook |
 
----
+**Free vs paid (copilot):**
 
-## How GOALIQ uses Injective
-
-GOALIQ is not just a football app with crypto bolted on. **Injective powers the payment layer.**
-
-### 1. Keplr wallet
-Users connect **Keplr** to the app. The wallet shows their **INJ** (gas) and **USDC** balance on Injective testnet.
-
-### 2. USDC micropayments
-When a user asks for premium analysis (e.g. *"win chances for Switzerland"*):
-1. Keplr prompts them to send **0.01 USDC** on Injective testnet
-2. The app verifies the payment **on-chain**
-3. Only then unlocks the detailed stats report
-
-No subscription. No account. Pay per question.
-
-### 3. x402 (pay-per-request)
-GOALIQ follows the **x402** pattern — each premium API call costs a small USDC fee. A separate Express server (`port 3001`) runs Injective's x402 middleware for premium endpoints.
-
-### 4. CCTP (cross-chain USDC)
-The **Fund Wallet** page guides users to get testnet USDC via:
-- [Circle faucet](https://faucet.circle.com) (Injective Testnet)
-- [Injective faucet](https://testnet.faucet.injective.network) (free INJ for gas)
-- Optional CCTP bridge from Sepolia
+| Free | Paid |
+|------|------|
+| Live scores, schedule, standings, bracket | Team form |
+| Basic H2H meetings / scheduled fixture | Win chances & match intelligence |
+| General chat | Tournament forecast |
 
 ---
 
-## Simple flow diagram
+## Why Injective is central (not bolted on)
 
-```
-User                    GOALIQ App                Injective Testnet
-  |                          |                          |
-  |-- Open dashboard ------->|                          |
-  |<-- Live scores ----------|                          |
-  |                          |                          |
-  |-- Ask "win chances" ---->|                          |
-  |<-- "Pay 0.01 USDC" ------|                          |
-  |                          |                          |
-  |-- Confirm in Keplr --------------------------------->|
-  |                          |<-- Verify USDC tx -------|
-  |<-- Premium report -------|                          |
-```
+Traditional sports platforms: **monthly subscription → use once → cancel.**
+
+GOALIQ: **ask one question → pay $0.02 USDC → receive premium intelligence instantly.**
+
+Injective x402 enables a new business model — every AI insight becomes an on-demand digital service unlocked through seamless micropayments. Injective isn't just infrastructure; it's the reason pay-per-insight works.
+
+### How it works (simple)
+
+1. User requests premium intelligence (copilot or match page)
+2. GOALIQ quotes a small USDC fee via **x402**
+3. User pays in **Keplr** on Injective testnet
+4. Payment is **verified on-chain**
+5. Intelligence unlocks instantly — one question, one payment, one answer
+
+### x402 endpoints (production)
+
+| Endpoint | Purpose | Price |
+|----------|---------|-------|
+| `/api/x402/premium/analysis?matchId=` | Tactical Intelligence | 0.05 USDC |
+| `/api/x402/premium/h2h?team1=&team2=` | Match Snapshot (H2H) | 0.02 USDC |
+| `/api/x402/copilot` | Premium copilot reply | 0.02–0.10 USDC |
+
+**Where users see it:** match-page unlock cards, copilot premium queries, dashboard receipt panel.
 
 ---
 
 ## Demo for judges (2 minutes)
 
-1. **Dashboard** → http://localhost:3000/dashboard  
-   Show Live / Today / Results tabs with real World Cup data.
+1. **Dashboard** — live World Cup data (free layer)
+2. **Copilot** — *"What matches are today?"* (free) then *"Win chances for Switzerland"* (paid)
+3. **x402 flow** — Keplr USDC → instant intelligence → on-chain receipt
+4. **Fund Wallet** — testnet tokens (no real money)
 
-2. **AI Copilot** → http://localhost:3000/copilot  
-   Ask: *"What World Cup matches are today?"* or *"So did Egypt lose?"*
-
-3. **Premium payment**  
-   - Connect Keplr (top right)  
-   - Ask: *"Win chances for Switzerland"*  
-   - Approve **0.01 USDC** in Keplr  
-   - Show the structured prediction report
-
-4. **Fund Wallet** → http://localhost:3000/fund  
-   Show how new users get testnet tokens (no real money).
+Pitch the **business model**, not just the scores UI.
 
 ---
 
@@ -113,39 +115,39 @@ User                    GOALIQ App                Injective Testnet
 ```bash
 npm install
 cp .env.example .env.local
-# Add FOOTBALL_DATA_KEY and GROQ_API_KEY to .env.local
+```
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `FOOTBALL_DATA_KEY` | Yes | Live scores, standings, bracket |
+| `GROQ_API_KEY` | Recommended | AI copilot |
+| `NEXT_PUBLIC_PAYMENT_WALLET` | For x402 | `0x…` treasury (receives USDC) |
+| `NEXT_PUBLIC_APP_URL` | Production | e.g. `https://your-app.vercel.app` |
+
+```bash
 npm run dev:clean
 ```
 
-Open **http://localhost:3000**
-
-You need:
-- **Node.js 18+**
-- **Keplr** wallet (Injective testnet)
-- Free key from [football-data.org](https://www.football-data.org/client/register)
+Open **http://localhost:3000** · Keplr on Injective testnet · USDC via `/fund`
 
 ---
 
-## Tech (short)
+## Tech
 
-- **Frontend:** Next.js 14, React, Tailwind
-- **Football data:** football-data.org + API-Football
-- **AI:** Groq (free LLM for chat)
-- **Blockchain:** Injective testnet, Keplr, USDC, x402, viem
+Next.js 14 · football-data.org · Groq AI · Injective testnet · Keplr · USDC · **x402** · viem
 
 ---
 
-## Injective hackathon tracks covered
+## Vision
 
-| Track | How we use it |
-|-------|----------------|
-| **x402** | Pay 0.01 USDC per premium insight |
-| **USDC** | On-chain payments via Keplr |
-| **CCTP** | Fund Wallet guides for cross-chain USDC |
-| **AI** | GOALIQ AI with real data + Injective payments |
+GOALIQ reimagines how fans access premium sports intelligence.
+
+Instead of expensive subscriptions, every AI insight becomes an on-demand digital service unlocked instantly through Injective's x402 payment protocol. Live football data remains free for everyone, while advanced analysis is available exactly when fans need it.
+
+GOALIQ demonstrates how AI and blockchain together can create a new generation of consumer applications powered by seamless micropayments.
 
 ---
 
 <p align="center">
-  <strong>GOALIQ</strong> — Free World Cup data. Premium intelligence on Injective.
+  <strong>GOALIQ</strong> — Football Intelligence. Powered by AI. Paid Per Insight.
 </p>

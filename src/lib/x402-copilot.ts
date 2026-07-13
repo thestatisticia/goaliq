@@ -4,11 +4,14 @@ import {
   buildTournamentForecast,
 } from "@/lib/match-analysis";
 import {
+  formatTeamFormReply,
   isSingleMatchAnalysisQuery,
+  isTeamFormQuery,
   isTournamentForecastQuery,
 } from "@/lib/copilot";
 import { ninjaGreeting } from "@/lib/copilot-personality";
-import { resolveTeamsFromMessage } from "@/lib/team-resolver";
+import { findTeamMentionedInMessage, resolveTeamsFromMessage } from "@/lib/team-resolver";
+import { getTeamWorldCupResults } from "@/lib/football-api";
 import type { CopilotContext } from "@/lib/types";
 
 /** Premium copilot reply after x402 payment is verified. */
@@ -18,6 +21,15 @@ export async function generateCopilotPremiumReply(
 ): Promise<string> {
   if (isTournamentForecastQuery(message)) {
     return buildTournamentForecast();
+  }
+
+  if (isTeamFormQuery(message)) {
+    const team = await findTeamMentionedInMessage(message);
+    if (!team) {
+      return `${ninjaGreeting()} Which team, ninja? Try "How has France performed recently?"`;
+    }
+    const results = await getTeamWorldCupResults(team.id, 5);
+    return formatTeamFormReply(team, results);
   }
 
   if (isSingleMatchAnalysisQuery(message)) {
