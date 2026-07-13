@@ -36,6 +36,7 @@ export interface FdMatch {
   awayTeam: FdTeam | null;
   score: FdScore;
   venue?: string | null;
+  competition?: { code?: string; name?: string; year?: number };
   goals?: FdGoal[];
   bookings?: FdBooking[];
   substitutions?: FdSubstitution[];
@@ -111,7 +112,7 @@ export async function footballDataRequest<T>(path: string, cacheKey: string, ttl
 
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "X-Auth-Token": key },
-    next: { revalidate: Math.max(1, Math.floor(ttlMs / 1000)) },
+    cache: "no-store",
   });
 
   if (res.status === 429) {

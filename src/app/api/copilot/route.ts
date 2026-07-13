@@ -431,19 +431,29 @@ export async function POST(request: Request) {
     }
   }
 
-  // Head-to-head — free, structured API data (never LLM guesswork)
+  // Head-to-head — premium Match Snapshot tier
   if (isHeadToHeadQuery(message)) {
+    const tier = getTierForQuery(message);
+    if (!txHash) {
+      return NextResponse.json({
+        reply: [
+          `${ninjaGreeting()} Head-to-head statistics are a **${tier.label}** — **${tier.usdc} USDC** on Injective testnet.`,
+          `_${tier.blurb}._`,
+          "",
+          "Connect Keplr and ask again — I'll prompt you to pay and unlock the full H2H record.",
+        ].join("\n"),
+        model: "payment-required",
+        provider: "payment",
+        intent: "payment",
+      });
+    }
     try {
       const h2h = await resolveHeadToHead(message);
       if (h2h) {
         return NextResponse.json({
-          reply: [
-            `${ninjaGreeting()} Here's **${h2h.team1.name} vs ${h2h.team2.name}** from live World Cup data:`,
-            "",
-            h2h.summary,
-            "",
-            `_Want form + win chances? Ask **"win chances for ${h2h.team1.name} vs ${h2h.team2.name}"** (${PRICING.insight.usdc} USDC)._`,
-          ].join("\n"),
+          reply: [`${ninjaGreeting()} Head-to-head record for **${h2h.team1.name} vs ${h2h.team2.name}**:`, "", h2h.summary].join(
+            "\n"
+          ),
           model: "football-data",
           provider: "football-data.org",
           intent: "h2h",

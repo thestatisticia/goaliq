@@ -23,7 +23,7 @@ export function isTodayScheduleQuery(message: string): boolean {
   return hasToday && (hasMatch || asksWorldCup);
 }
 
-/** Free head-to-head / stats-between-teams queries (not win-chance or tactical unlocks). */
+/** Premium head-to-head statistics between two teams. */
 export function isHeadToHeadQuery(message: string): boolean {
   if (wantsMatchAnalysis(message)) return false;
   if (isTournamentForecastQuery(message)) return false;

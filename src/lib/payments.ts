@@ -25,7 +25,7 @@ export const PRICING: Record<PricingTierId, PricingTier> = {
     id: "insight",
     label: "Match Snapshot",
     usdc: 0.02,
-    blurb: "Win chances, team form, and match preview",
+    blurb: "Win chances, team form, head-to-head stats, and match preview",
   },
   report: {
     id: "report",
@@ -46,6 +46,7 @@ export const MIN_PREMIUM_USDC = Math.min(...Object.values(PRICING).map((t) => t.
 
 /** Pick the pricing tier a premium query belongs to. */
 export function getTierForQuery(message: string): PricingTier {
+  if (isHeadToHeadQuery(message)) return PRICING.insight;
   if (
     /who\s+will\s+win\s+the\s+(world\s+cup|tournament|title)|win\s+the\s+world\s+cup|tournament\s+(forecast|winner|prediction)|predict\s+the\s+(bracket|winner|champion|whole)|lift\s+the\s+trophy|go\s+all\s+the\s+way|reach\s+the\s+final/i.test(
       message
@@ -81,8 +82,7 @@ export function getPaymentExplorerUrl(txHash: string): string {
 
 /** Queries that cost USDC */
 export function isPremiumQuery(message: string): boolean {
-  // Free: basic head-to-head meetings / scheduled fixture only (no form, no win %)
-  if (isHeadToHeadQuery(message)) return false;
+  if (isHeadToHeadQuery(message)) return true;
 
   // Free: bulk previews for upcoming fixtures
   if (isUpcomingAnalysisQuery(message)) return false;

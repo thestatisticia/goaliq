@@ -5,12 +5,13 @@ import {
 } from "@/lib/match-analysis";
 import {
   formatTeamFormReply,
+  isHeadToHeadQuery,
   isSingleMatchAnalysisQuery,
   isTeamFormQuery,
   isTournamentForecastQuery,
 } from "@/lib/copilot";
 import { ninjaGreeting } from "@/lib/copilot-personality";
-import { findTeamMentionedInMessage, resolveTeamsFromMessage } from "@/lib/team-resolver";
+import { findTeamMentionedInMessage, resolveHeadToHead, resolveTeamsFromMessage } from "@/lib/team-resolver";
 import { getTeamWorldCupResults } from "@/lib/football-api";
 import type { CopilotContext } from "@/lib/types";
 
@@ -19,6 +20,18 @@ export async function generateCopilotPremiumReply(
   message: string,
   context?: CopilotContext
 ): Promise<string> {
+  if (isHeadToHeadQuery(message)) {
+    const h2h = await resolveHeadToHead(message);
+    if (h2h) {
+      return [
+        `${ninjaGreeting()} Head-to-head record for **${h2h.team1.name} vs ${h2h.team2.name}**:`,
+        "",
+        h2h.summary,
+      ].join("\n");
+    }
+    return `${ninjaGreeting()} Name both teams clearly — e.g. **"head to head France vs Spain"**.`;
+  }
+
   if (isTournamentForecastQuery(message)) {
     return buildTournamentForecast();
   }

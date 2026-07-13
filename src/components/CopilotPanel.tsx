@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, Coins } from "lucide-react";
+import { ArrowUp, Bot, Coins } from "lucide-react";
 import type { ChatMessage, CopilotContext } from "@/lib/types";
 import { useWallet } from "@/context/WalletContext";
 import { usePaymentConfig } from "@/context/PaymentConfigContext";
 import { cn } from "@/lib/utils";
-import { PaymentInfo } from "@/components/PaymentInfo";
 import { MIN_PREMIUM_USDC, isPremiumQuery, getTierForQuery } from "@/lib/payments";
 import { fetchX402Resource, x402PremiumUrl } from "@/lib/x402-client";
 import { savePredictionReceipt } from "@/lib/prediction-receipts";
 import { ChatMessageBody } from "@/components/ChatMessageBody";
-import { COPILOT_PROMPT_CHIPS } from "@/lib/copilot-prompts";
+import { COPILOT_FEATURED_CHIPS } from "@/lib/copilot-prompts";
 
 interface CopilotPanelProps {
   context?: CopilotContext;
@@ -23,6 +22,14 @@ interface ModelOption {
   provider: string;
 }
 
+const QUICK_PROMPTS = [
+  { label: "Today's World Cup matches", query: COPILOT_FEATURED_CHIPS[0].query },
+  { label: "Teams still in the tournament", query: COPILOT_FEATURED_CHIPS[1].query },
+  { label: "Head-to-head statistics", query: "Head to head France vs Spain", premium: true },
+  { label: "Who's winning right now", query: "Who is winning right now?" },
+  { label: "Show the knockout bracket", query: "Show the knockout bracket" },
+];
+
 export function CopilotPanel({ context = {} }: CopilotPanelProps) {
   const wallet = useWallet();
   const { paymentsEnabled, paymentWallet } = usePaymentConfig();
@@ -31,7 +38,7 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
       id: "welcome",
       role: "assistant",
       content:
-        "Hey ninja! I'm **GOALIQ AI** — your World Cup intelligence copilot.\n\n• **Free:** live coverage, today's matches, tournament chat\n• **Premium:** unlock football intelligence from **" +
+        "Hey ninja! I'm your World Cup intelligence copilot.\n\n• **Free:** live coverage, today's matches, tournament chat\n• **Premium:** head-to-head stats, win chances, and tactical breakdowns from **" +
         MIN_PREMIUM_USDC +
         " USDC** — win chances, tactical breakdowns, forecasts",
       timestamp: new Date(),
@@ -45,6 +52,11 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
   const [selectedModel, setSelectedModel] = useState("");
   const [llmReady, setLlmReady] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const inConversation = messages.some((m) => m.role === "user");
+  const matchLabel =
+    context?.homeTeam && context?.awayTeam ? `${context.homeTeam} vs ${context.awayTeam}` : null;
 
   useEffect(() => {
     fetch("/api/copilot")
@@ -57,13 +69,15 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (inConversation) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, inConversation]);
 
-  async function send() {
-    if (!input.trim() || loading || paying) return;
+  async function send(textOverride?: string) {
+    const text = (textOverride ?? input).trim();
+    if (!text || loading || paying) return;
 
-    const text = input.trim();
     const needsPayment = isPremiumQuery(text) && paymentsEnabled;
     const tier = getTierForQuery(text);
 
@@ -193,115 +207,185 @@ export function CopilotPanel({ context = {} }: CopilotPanelProps) {
     }
   }
 
-  const suggestions = COPILOT_PROMPT_CHIPS;
+  const composer = (
+    <Composer
+      input={input}
+      loading={loading}
+      paying={paying}
+      inputRef={inputRef}
+      onInputChange={setInput}
+      onSend={() => send()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          send();
+        }
+      }}
+    />
+  );
 
   return (
-    <div className="flex h-[calc(100vh-11rem)] min-h-[560px] flex-col rounded-xl border border-goaliq-border bg-goaliq-card">
-      <div className="flex items-center gap-2 border-b border-goaliq-border px-4 py-3">
-        <Bot className="h-5 w-5 text-goaliq-accent" />
-        <h2 className="font-semibold">GOALIQ AI</h2>
-        <span
-          className={cn(
-            "ml-2 rounded-full px-2 py-0.5 text-[10px]",
-            llmReady ? "bg-goaliq-accent/20 text-goaliq-accent" : "bg-yellow-500/20 text-yellow-400"
+    <div className="flex min-h-[calc(100vh-10rem)] flex-col">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-sm text-goaliq-muted">
+        <div className="flex flex-wrap items-center gap-3">
+          <span>{llmReady ? "AI enabled" : "Basic responses"}</span>
+          {matchLabel && (
+            <>
+              <span className="text-goaliq-border">·</span>
+              <span>{matchLabel}{context?.score ? ` · ${context.score}` : ""}</span>
+            </>
           )}
-        >
-          {llmReady ? "AI" : "Basic"}
-        </span>
-      </div>
-
-      <div className="px-4 py-2 border-b border-goaliq-border/50 space-y-2">
-        <PaymentInfo />
-        {models.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-3 w-3 text-goaliq-gold" />
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="flex-1 bg-transparent text-xs text-gray-400 focus:outline-none"
-            >
-              {models.map((m) => (
-                <option key={m.id} value={m.id} className="bg-goaliq-card">
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => (
-          <div key={msg.id} className={cn("flex gap-3", msg.role === "user" && "flex-row-reverse")}>
-            <div
-              className={cn(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                msg.role === "assistant" ? "bg-goaliq-accent/20 text-goaliq-accent" : "bg-gray-700"
-              )}
-            >
-              {msg.role === "assistant" ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
-            </div>
-            <div
-              className={cn(
-                "rounded-lg px-3 py-2 max-w-[90%]",
-                msg.role === "assistant" ? "bg-gray-800/80" : "bg-goaliq-accent/20 text-goaliq-accent"
-              )}
-            >
-              {msg.role === "assistant" ? (
-                <ChatMessageBody content={msg.content} />
-              ) : (
-                <p className="text-sm leading-relaxed">{msg.content}</p>
-              )}
-            </div>
-          </div>
-        ))}
-        {(loading || paying) && (
-          <div className="flex gap-3">
-            <div className="h-8 w-8 rounded-full bg-goaliq-accent/20 flex items-center justify-center">
-              {paying ? <Coins className="h-4 w-4 text-goaliq-gold animate-pulse" /> : <Bot className="h-4 w-4 text-goaliq-accent animate-pulse" />}
-            </div>
-            <div className="rounded-lg bg-gray-800/80 px-3 py-2 text-sm text-gray-400">
-              {paying ? `x402 · confirm ${payingUsdc ?? "…"} USDC in Keplr...` : "Thinking..."}
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {messages.length <= 1 && (
-        <div className="flex flex-wrap gap-2 px-4 pb-2">
-          {suggestions.map((chip) => (
-            <button
-              key={chip.query}
-              onClick={() => setInput(chip.query)}
-              className="rounded-full border border-goaliq-border px-3 py-1 text-xs text-gray-400 hover:border-goaliq-accent hover:text-goaliq-accent transition-colors"
-            >
-              {chip.label}
-              {chip.premium ? ` · ${getTierForQuery(chip.query).usdc} USDC` : ""}
-            </button>
-          ))}
+          {paymentsEnabled && (
+            <>
+              <span className="text-goaliq-border">·</span>
+              <span>Premium from {MIN_PREMIUM_USDC} USDC</span>
+            </>
+          )}
         </div>
-      )}
+        {models.length > 0 && (
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="bg-transparent text-sm text-goaliq-muted focus:outline-none"
+          >
+            {models.map((m) => (
+              <option key={m.id} value={m.id} className="bg-goaliq-card">
+                {m.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
-      <div className="border-t border-goaliq-border p-3 flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-          placeholder={
-            isPremiumQuery(input)
-              ? `${getTierForQuery(input).label} — ${getTierForQuery(input).usdc} USDC`
-              : "Ask about matches..."
-          }
-          className="flex-1 rounded-lg bg-gray-800/50 border border-goaliq-border px-3 py-2 text-sm focus:outline-none focus:border-goaliq-accent"
-        />
-        <button
-          onClick={send}
-          disabled={loading || paying || !input.trim()}
-          className="rounded-lg bg-goaliq-accent px-3 py-2 text-sm font-medium text-black disabled:opacity-50 hover:bg-goaliq-accent/90 transition-colors"
-        >
-          <Send className="h-4 w-4" />
-        </button>
+      {!inConversation ? (
+        <div className="flex flex-1 flex-col items-center justify-center pb-8">
+          <div className="w-full max-w-2xl text-center">
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-goaliq-fg sm:text-4xl">
+              GOALIQ AI
+            </h1>
+            <p className="mt-3 text-lg text-goaliq-muted sm:text-xl">
+              World Cup intelligence on demand
+            </p>
+          </div>
+
+          <div className="mt-10 w-full max-w-2xl">{composer}</div>
+
+          <ul className="mt-8 w-full max-w-2xl space-y-3.5">
+            {QUICK_PROMPTS.map((chip) => (
+              <li key={chip.query}>
+                <button
+                  type="button"
+                  onClick={() => send(chip.query)}
+                  className="text-left text-base text-goaliq-muted transition-colors hover:text-goaliq-fg"
+                >
+                  {chip.label}
+                  {"premium" in chip && chip.premium ? (
+                    <span className="ml-2 text-sm text-goaliq-gold">· premium</span>
+                  ) : null}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <>
+          <div className="mx-auto w-full max-w-2xl flex-1 space-y-10 overflow-y-auto pb-8">
+            {messages.map((msg) => (
+              <MessageBlock key={msg.id} role={msg.role} content={msg.content} />
+            ))}
+            {(loading || paying) && (
+              <div className="flex gap-4">
+                <AssistantAvatar />
+                <p className="pt-2 text-base text-goaliq-muted">
+                  {paying ? `Confirming ${payingUsdc ?? "…"} USDC in Keplr…` : "Thinking…"}
+                </p>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="border-t border-goaliq-borderSubtle pt-6">
+            <div className="mx-auto w-full max-w-2xl">{composer}</div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Composer({
+  input,
+  loading,
+  paying,
+  inputRef,
+  onInputChange,
+  onSend,
+  onKeyDown,
+}: {
+  input: string;
+  loading: boolean;
+  paying: boolean;
+  inputRef: React.RefObject<HTMLInputElement>;
+  onInputChange: (value: string) => void;
+  onSend: () => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+}) {
+  const tier = isPremiumQuery(input) ? getTierForQuery(input) : null;
+
+  return (
+    <div className="flex items-center gap-3 rounded-full border border-goaliq-border bg-goaliq-card px-5 py-2.5 shadow-card transition-colors focus-within:border-goaliq-accent/40">
+      <input
+        ref={inputRef}
+        value={input}
+        onChange={(e) => onInputChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder={
+          tier
+            ? `${tier.label} · ${tier.usdc} USDC`
+            : "Ask about matches, standings, or unlock intelligence…"
+        }
+        className="min-w-0 flex-1 bg-transparent py-2.5 text-base text-goaliq-fg placeholder:text-goaliq-muted/80 focus:outline-none"
+      />
+      <button
+        type="button"
+        onClick={onSend}
+        disabled={loading || paying || !input.trim()}
+        className={cn(
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
+          input.trim()
+            ? "bg-goaliq-accent text-goaliq-bg hover:bg-sky-300"
+            : "text-goaliq-muted"
+        )}
+        aria-label="Send message"
+      >
+        {paying ? <Coins className="h-4 w-4 animate-pulse" /> : <ArrowUp className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
+
+function AssistantAvatar() {
+  return (
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-goaliq-accent/25 bg-gradient-to-br from-goaliq-accent/20 to-goaliq-accent/5">
+      <Bot className="h-5 w-5 text-goaliq-accent" />
+    </div>
+  );
+}
+
+function MessageBlock({ role, content }: { role: "user" | "assistant"; content: string }) {
+  if (role === "user") {
+    return (
+      <div className="flex justify-end">
+        <p className="max-w-[85%] text-base leading-relaxed text-goaliq-fg sm:text-[17px]">{content}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-4">
+      <AssistantAvatar />
+      <div className="min-w-0 flex-1 pt-0.5 text-base leading-relaxed text-goaliq-fg sm:text-[17px]">
+        <ChatMessageBody content={content} />
       </div>
     </div>
   );

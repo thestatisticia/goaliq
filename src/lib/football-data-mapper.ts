@@ -73,8 +73,8 @@ export function mapFdMatch(fd: FdMatch): Match {
     },
     league: {
       id: WC_LEAGUE_ID,
-      name: "FIFA World Cup",
-      season: WC_SEASON,
+      name: fd.competition?.name ?? "FIFA World Cup",
+      season: fd.competition?.year ?? WC_SEASON,
       round: formatRound(fd.stage, fd.group),
     },
     teams: {

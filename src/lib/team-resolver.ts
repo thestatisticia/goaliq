@@ -174,7 +174,7 @@ export async function searchTeam(query: string): Promise<TeamResult | null> {
   }
 }
 
-/** Free H2H: meetings + scheduled fixture only. Form / win % stay premium. */
+/** Premium H2H — finished meetings only (no upcoming fixtures). */
 export async function resolveHeadToHead(message: string): Promise<{
   team1: TeamResult;
   team2: TeamResult;
@@ -185,11 +185,54 @@ export async function resolveHeadToHead(message: string): Promise<{
   if (!resolved) return null;
 
   const [team1, team2] = resolved;
-  const matches = await getHeadToHead(team1.id, team2.id);
+  const allMatches = await getHeadToHead(team1.id, team2.id);
+  const matches = allMatches.filter((m) => m.goals.home !== null && m.goals.away !== null);
 
-  const played = matches.filter((m) => m.goals.home !== null && m.goals.away !== null);
-  const upcoming = matches.filter((m) => m.goals.home === null && m.goals.away === null);
+  const wcSeason = 2026;
+  const isWcMatch = (m: Match) =>
+    m.league?.season === wcSeason || /world cup/i.test(m.league?.name ?? "");
+  const wcPlayed = matches.filter(isWcMatch);
+  const otherPlayed = matches.filter((m) => !isWcMatch(m));
+  const record = computeH2HRecord(matches, team1.id, team2.id);
 
+  const lines: string[] = [`**${team1.name} vs ${team2.name}**`, ""];
+
+  if (wcPlayed.length > 0) {
+    const wcRecord = computeH2HRecord(wcPlayed, team1.id, team2.id);
+    lines.push("**This World Cup (2026)**");
+    lines.push(
+      `Record: ${team1.name} ${wcRecord.t1Wins}W · ${team2.name} ${wcRecord.t2Wins}W · ${wcRecord.draws}D`
+    );
+    for (const m of wcPlayed) {
+      lines.push(`- ${formatH2HLine(m)}`);
+    }
+    lines.push("");
+  }
+
+  if (otherPlayed.length > 0) {
+    lines.push("**Previous meetings**");
+    for (const m of otherPlayed) {
+      lines.push(`- ${formatH2HLine(m)}`);
+    }
+    lines.push("");
+  }
+
+  if (matches.length > 0) {
+    lines.push(
+      `**Overall:** ${team1.name} ${record.t1Wins}W · ${team2.name} ${record.t2Wins}W · ${record.draws}D across ${matches.length} finished match${matches.length === 1 ? "" : "es"}`
+    );
+  } else {
+    lines.push("No finished head-to-head meetings in the current data feed.");
+  }
+
+  return { team1, team2, matches, summary: lines.join("\n") };
+}
+
+function computeH2HRecord(
+  played: Match[],
+  team1Id: number,
+  team2Id: number
+): { t1Wins: number; t2Wins: number; draws: number } {
   let t1Wins = 0;
   let t2Wins = 0;
   let draws = 0;
@@ -197,34 +240,30 @@ export async function resolveHeadToHead(message: string): Promise<{
   for (const m of played) {
     const h = m.goals.home!;
     const a = m.goals.away!;
-    const t1IsHome = m.teams.home.id === team1.id;
+    const t1IsHome = m.teams.home.id === team1Id;
     if (h === a) draws++;
     else if (h > a) t1IsHome ? t1Wins++ : t2Wins++;
     else t1IsHome ? t2Wins++ : t1Wins++;
   }
 
-  const lines = matches.map((m) => {
-    const score =
-      m.goals.home !== null ? `${m.goals.home}-${m.goals.away}` : "not played yet";
-    return `- ${new Date(m.fixture.date).toLocaleDateString()}: ${m.teams.home.name} ${score} ${m.teams.away.name} (${m.fixture.status.long})${m.league?.round ? ` — ${m.league.round}` : ""}`;
+  return { t1Wins, t2Wins, draws };
+}
+
+function formatH2HLine(m: Match): string {
+  const date = new Date(m.fixture.date).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
-
-  const summary = [
-    `HEAD-TO-HEAD: ${team1.name} vs ${team2.name}`,
-    `Meetings in API: ${matches.length}`,
-    played.length
-      ? `Record: ${team1.name} ${t1Wins}W, ${team2.name} ${t2Wins}W, ${draws}D (${played.length} finished)`
-      : upcoming.length
-        ? `No finished meetings yet — ${upcoming.length} scheduled in this World Cup.`
-        : "No finished meetings in the current data feed.",
-    upcoming.length
-      ? `Next: ${upcoming.map((m) => `${m.league.round ?? "World Cup"} · ${new Date(m.fixture.date).toLocaleString()} · ${m.teams.home.name} vs ${m.teams.away.name}`).join("; ")}`
-      : "",
-    "Matches:",
-    ...(lines.length ? lines : ["- No meetings found in API"]),
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  return { team1, team2, matches, summary };
+  const score =
+    m.goals.home !== null && m.goals.away !== null
+      ? `${m.goals.home}–${m.goals.away}`
+      : "vs";
+  const comp = m.league?.name ?? "Competition";
+  const round = m.league?.round ? ` · ${m.league.round}` : "";
+  const status =
+    m.fixture.status.short === "NS" || m.fixture.status.short === "TBD"
+      ? "Upcoming"
+      : m.fixture.status.long;
+  return `${date}: ${m.teams.home.name} ${score} ${m.teams.away.name} (${comp}${round} · ${status})`;
 }

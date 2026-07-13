@@ -2,14 +2,22 @@
 
 import { MIN_PREMIUM_USDC, PREMIUM_USDC, getPaymentExplorerUrl } from "@/lib/payments";
 import { usePaymentConfig } from "@/context/PaymentConfigContext";
+import { cn } from "@/lib/utils";
 import { ExternalLink } from "lucide-react";
 
-export function PaymentInfo() {
+export function PaymentInfo({ compact }: { compact?: boolean }) {
   const { paymentsEnabled, loading } = usePaymentConfig();
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-goaliq-border bg-goaliq-card/50 px-3 py-2 text-[11px] text-gray-500">
+      <div
+        className={cn(
+          "text-[11px] text-goaliq-muted",
+          compact
+            ? "rounded-xl border border-goaliq-border/60 bg-goaliq-card/40 px-3 py-2 backdrop-blur-sm"
+            : "rounded-lg border border-goaliq-border bg-goaliq-card/50 px-3 py-2"
+        )}
+      >
         Loading payment config…
       </div>
     );
@@ -17,10 +25,26 @@ export function PaymentInfo() {
 
   if (!paymentsEnabled) {
     return (
-      <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-[11px] text-yellow-300">
+      <div
+        className={cn(
+          "text-[11px] text-goaliq-gold",
+          compact
+            ? "rounded-xl border border-goaliq-gold/20 bg-goaliq-gold/5 px-3 py-2 backdrop-blur-sm"
+            : "rounded-lg border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-yellow-300"
+        )}
+      >
         Premium payments are temporarily unavailable. Add{" "}
         <span className="font-mono">NEXT_PUBLIC_PAYMENT_WALLET</span> (0x address) in Vercel and redeploy.
       </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <p className="rounded-xl border border-goaliq-border/60 bg-goaliq-card/40 px-3 py-2 text-[11px] text-goaliq-muted backdrop-blur-sm">
+        Premium intelligence unlocks from{" "}
+        <span className="font-medium text-goaliq-gold">{MIN_PREMIUM_USDC} USDC</span> via Injective x402.
+      </p>
     );
   }
 

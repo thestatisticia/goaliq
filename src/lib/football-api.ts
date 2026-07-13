@@ -31,6 +31,8 @@ const TOURNAMENT_END = "2026-07-31";
 export type DashboardSource = "football-data" | "api-football" | "fallback" | "misconfigured";
 
 function allowDevFallback(): boolean {
+  // Never serve demo fixtures when a real football-data key is configured
+  if (isFootballDataConfigured()) return false;
   return process.env.NODE_ENV !== "production" || serverEnv("ALLOW_WC_FALLBACK") === "true";
 }
 
@@ -608,11 +610,14 @@ export async function getDashboardData(opts?: { timeZone?: string }) {
   } else if (isFallbackDataset(tournament)) {
     source = "fallback";
     warning =
-      "Showing offline demo matches — football-data.org did not respond on the server. Confirm FOOTBALL_DATA_KEY in Vercel and redeploy.";
+      "Showing offline demo matches — live API is unavailable. Remove ALLOW_WC_FALLBACK from Vercel if set, confirm FOOTBALL_DATA_KEY is valid, then redeploy.";
+  } else if (tournament.length === 0) {
+    source = envStatus.footballDataKey ? "football-data" : "api-football";
+    warning = envStatus.footballDataKey
+      ? "football-data.org did not respond on the server. Check that FOOTBALL_DATA_KEY is valid (not the .env.example placeholder), then redeploy on Vercel."
+      : "Could not load World Cup schedule. Check API keys or rate limits.";
   } else if (tournament.length > 0 && tournament.length < 50) {
     warning = `Only ${tournament.length} of 104 World Cup matches loaded — API may be rate-limited. Try again in a minute.`;
-  } else if (tournament.length === 0) {
-    warning = "Could not load World Cup schedule. Check API keys or rate limits.";
   }
 
   return {
@@ -794,28 +799,32 @@ function findMatchBetweenTeams(all: Match[], team1Id: number, team2Id: number): 
 
 export async function getHeadToHead(team1: number, team2: number): Promise<Match[]> {
   const tournament = await loadWorldCupTournamentMatches();
-  const fixture = findMatchBetweenTeams(tournament, team1, team2);
+  const wcFixture = findMatchBetweenTeams(tournament, team1, team2);
 
-  if (fixture && isFootballDataConfigured()) {
+  const wcBetween = tournament.filter(
+    (m) =>
+      (m.teams.home.id === team1 && m.teams.away.id === team2) ||
+      (m.teams.home.id === team2 && m.teams.away.id === team1)
+  );
+
+  let historical: Match[] = [];
+  if (wcFixture && isFootballDataConfigured()) {
     try {
-      const h2h = await getFdHeadToHead(fixture.fixture.id);
-      const mapped = h2h.map(mapFdMatch);
-      if (mapped.length > 0) return mapped;
+      const h2h = await getFdHeadToHead(wcFixture.fixture.id);
+      historical = h2h.map(mapFdMatch);
     } catch {
       /* fall through */
     }
   }
 
-  const direct = tournament.filter(
-    (m) =>
-      FINISHED.has(m.fixture.status.short) &&
-      ((m.teams.home.id === team1 && m.teams.away.id === team2) ||
-        (m.teams.home.id === team2 && m.teams.away.id === team1))
-  );
-  if (direct.length > 0) return direct;
+  const byId = new Map<number, Match>();
+  for (const m of [...wcBetween, ...historical]) {
+    byId.set(m.fixture.id, m);
+  }
 
-  // Include scheduled fixture even when historical H2H feed is empty
-  if (fixture) return [fixture];
+  if (byId.size > 0) {
+    return sortHeadToHeadMatches(Array.from(byId.values()));
+  }
 
   try {
     const api = await apisportsFetch<Match[]>(
@@ -823,12 +832,22 @@ export async function getHeadToHead(team1: number, team2: number): Promise<Match
       `h2h-${team1}-${team2}`,
       CACHE_TTL.h2h
     );
-    if (api.length > 0) return api;
+    if (api.length > 0) return sortHeadToHeadMatches(api);
   } catch {
     /* fall through */
   }
 
   return [];
+}
+
+function sortHeadToHeadMatches(matches: Match[]): Match[] {
+  const upcoming = ["NS", "TBD", "PST"];
+  return matches.slice().sort((a, b) => {
+    const aUp = upcoming.includes(a.fixture.status.short);
+    const bUp = upcoming.includes(b.fixture.status.short);
+    if (aUp !== bUp) return aUp ? -1 : 1;
+    return new Date(b.fixture.date).getTime() - new Date(a.fixture.date).getTime();
+  });
 }
 
 export async function getTeamWorldCupResults(teamId: number, max = 5): Promise<Match[]> {
